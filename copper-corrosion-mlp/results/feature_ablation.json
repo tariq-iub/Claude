@@ -1,0 +1,32 @@
+{
+  "lab": {
+    "macro_f1_mean": 0.7326534871922111,
+    "macro_f1_std": 0.07824694920872452,
+    "n_folds": 15,
+    "dim": 3
+  },
+  "lab_hsv": {
+    "macro_f1_mean": 0.7232191557674669,
+    "macro_f1_std": 0.06813997222682706,
+    "n_folds": 15,
+    "dim": 7
+  },
+  "extended": {
+    "macro_f1_mean": 0.7317269912726484,
+    "macro_f1_std": 0.08753275582527206,
+    "n_folds": 15,
+    "dim": 9
+  },
+  "lab_deltaE": {
+    "macro_f1_mean": 0.7306336615243976,
+    "macro_f1_std": 0.09120223560179193,
+    "n_folds": 15,
+    "dim": 8
+  },
+  "extended_deltaE": {
+    "macro_f1_mean": 0.7229688803763737,
+    "macro_f1_std": 0.06451200525893555,
+    "n_folds": 15,
+    "dim": 14
+  }
+}

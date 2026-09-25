@@ -1,0 +1,59 @@
+seed: 42
+seeds_for_repeat: [11, 23, 37, 53, 71]
+
+data:
+  labels_path: data/labels.xlsx
+  settings_path: data/settings.xlsx
+  invalid_row_policy: remove
+
+features:
+  set: lab   # one of: lab, lab_hsv, extended, lab_deltaE, extended_deltaE
+             # selected empirically: results/feature_ablation.csv shows all
+             # candidate sets are statistically indistinguishable (overlapping
+             # std) on macro-F1, so the smallest set (raw Lab, D=3) is chosen
+             # per the "smallest model with strongest generalization" philosophy.
+
+model:
+  kind: residual          # plain | residual (selected by architecture ablation)
+  hidden_dims: [32, 32]
+  activation: gelu
+  dropout: 0.2
+  batchnorm: true
+
+training:
+  optimizer: adamw
+  learning_rate: 0.003
+  weight_decay: 0.0001
+  batch_size: 32
+  epochs: 300
+  patience: 30
+  scheduler: plateau      # plateau | cosine | none
+
+loss:
+  type: weighted_ce        # weighted_ce | focal
+  class_weights: none      # none | inverse-frequency | effective-number
+                            # selected empirically: results/ablation_results.csv stage 4 shows
+                            # inverse-frequency weighting REDUCES mean macro-F1 (0.756->0.729)
+                            # vs. unweighted CE on this dataset (negative result, kept per
+                            # task-brief §36 rather than assuming weighting helps).
+  effective_beta: 0.999
+  focal_gamma: 2.0
+
+validation:
+  folds: 5
+  repeats: 3
+  grouped: false            # no grouping metadata available in labels.xlsx (documented limitation)
+  train_frac: 0.70
+  val_frac: 0.15
+  test_frac: 0.15
+
+uncertainty:
+  confidence_threshold: auto   # tuned on validation set, see results
+  min_coverage: 0.70
+
+calibration:
+  method: temperature_scaling
+
+deployment:
+  quantization: dynamic_int8
+  target: cpu
