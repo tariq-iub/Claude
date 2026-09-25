@@ -1,0 +1,11 @@
+{
+  "missing_value_rows": 0,
+  "unknown_label_rows": 0,
+  "out_of_range_rows": 0,
+  "exact_duplicate_groups": 0,
+  "exact_duplicate_rows": 0,
+  "conflicting_label_duplicate_groups": 0,
+  "n_valid": 290,
+  "n_invalid_total": 0,
+  "pct_invalid": 0.0
+}

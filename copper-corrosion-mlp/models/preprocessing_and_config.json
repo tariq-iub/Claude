@@ -1,0 +1,44 @@
+{
+  "feature_set": "lab",
+  "feature_names": [
+    "L",
+    "a",
+    "b"
+  ],
+  "hidden_dims": [
+    32,
+    32
+  ],
+  "model_kind": "residual",
+  "activation": "gelu",
+  "dropout": 0.2,
+  "batchnorm": true,
+  "scaler": {
+    "mean": [
+      59.79002401262227,
+      0.24475176015518504,
+      8.578456696012232
+    ],
+    "std": [
+      23.18242879304019,
+      12.10779261912388,
+      14.051498762957312
+    ],
+    "constant_mask": [
+      false,
+      false,
+      false
+    ]
+  },
+  "class_order": [
+    "Healthy",
+    "Cu2O",
+    "CuO",
+    "CuCl",
+    "CuCl2"
+  ],
+  "temperature": 0.7061327695846558,
+  "abstention_threshold": 0.575,
+  "seed": 11,
+  "prototypes": null
+}

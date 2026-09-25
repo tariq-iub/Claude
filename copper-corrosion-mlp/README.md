@@ -313,68 +313,209 @@ subject to ≥70% coverage (`results/uncertainty_results.json`).
 
 ## E. Results
 
-*(filled in from `results/*.json` after `experiments/run_all.py`; see
-that directory for the exact machine-produced numbers behind every
-figure below.)*
+All numbers below were produced by `experiments/optimize_mlp.py` and
+`experiments/deployment_check.py` against the real 290-row expert-labeled
+dataset (raw output in `results/*.json`).
 
-### E.1 Multi-seed held-out test performance (seeds 11/23/37/53/71)
+### E.1 Multi-seed held-out test performance (70/15/15 stratified holdout, seeds 11/23/37/53/71)
 
-See `results/multi_seed_stability.json`.
+| Metric | mean ± std |
+|---|---|
+| Test accuracy | 0.827 ± 0.038 |
+| Test balanced accuracy | 0.774 ± 0.053 |
+| Test macro-F1 | 0.770 ± 0.058 |
+| Test weighted-F1 | 0.809 ± 0.049 |
 
-### E.2 Baseline comparison (same seed-0 split)
+Reported as mean±std over 5 independent seeds, not the best seed
+(task brief §14/§36). Bootstrap 95% CIs (seed-11 split, 1000
+observation-level resamples — no grouping metadata available for a
+group-level bootstrap, see §A.3): accuracy 0.890 [0.800, 0.978],
+balanced accuracy 0.856 [0.743, 0.967], macro-F1 0.837 [0.697, 0.964]
+(`results/bootstrap_confidence_intervals.json`).
 
-See `results/baseline_comparison.json` — nearest-prototype-ΔE00,
-nearest-centroid-Euclidean, multinomial logistic regression, vs. the
-proposed MLP.
+**Per-class (seed-11 test split, n=45)** (`results/metrics_test.json`):
+
+| Class | Precision | Recall | Specificity | F1 | Support |
+|---|---:|---:|---:|---:|---:|
+| Healthy | 0.950 | 1.000 | 0.962 | 0.974 | 19 |
+| Cu2O | 1.000 | 0.571 | 1.000 | 0.727 | 7 |
+| CuO | 0.714 | 1.000 | 0.950 | 0.833 | 5 |
+| CuCl | 0.857 | 0.857 | 0.974 | 0.857 | 7 |
+| CuCl2 | 0.857 | 0.857 | 0.974 | 0.857 | 7 |
+
+**Confusion matrix** (rows=true, cols=predicted, order H/Cu2O/CuO/CuCl/CuCl2):
+
+```
+        H  Cu2O CuO CuCl CuCl2
+H      19    0   0    0    0
+Cu2O    1    4   2    0    0
+CuO     0    0   5    0    0
+CuCl    0    0   0    6    1
+CuCl2   0    0   0    1    6
+```
+
+Consistent with the EDA in §A.2, **Cu2O is the model's weakest class**
+(recall 0.571 — 2 of 7 misclassified as CuO, 1 as Healthy), directly
+traceable to the bimodal Cu2O sub-population (reddish vs. green-toned)
+identified as an annotation question in §A.2, not a modeling artifact:
+no architecture in the ablation (§F) recovers Cu2O much further, and the
+confusion is with CuO/Healthy — its two nearest neighbors in Lab space
+for the "green-toned" Cu2O subgroup.
+
+### E.2 Baseline comparison (task brief §26 — does the MLP earn its place?)
+
+Same seed-11 70/15/15 split, all baselines fit on the training partition only:
+
+| Model | Test accuracy | Test macro-F1 |
+|---|---:|---:|
+| Nearest prototype (CIEDE2000 to training centroids) | 0.644 | 0.621 |
+| Nearest centroid (Euclidean, standardized Lab) | 0.644 | 0.625 |
+| Multinomial logistic regression (balanced) | 0.622 | 0.606 |
+| **Proposed PC-ResMLP** | **0.889** | **0.850** |
+
+The MLP beats every linear/prototype baseline by ≥0.22 macro-F1 —
+strong evidence it is learning a genuinely nonlinear decision surface
+in Lab space, not memorizing a lookup table over the training prototypes
+(task brief §23).
 
 ### E.3 Calibration & uncertainty
 
-See `results/calibration_results.json`, `results/uncertainty_results.json`.
+- ECE: 0.086 (raw softmax) → **0.049** after temperature scaling
+  (T=0.706, fit on the validation split only).
+- Abstention threshold τ=0.575 tuned on validation (≥70% coverage
+  constraint): on the test set, coverage = 95.6%, retained accuracy on
+  non-abstained predictions = 88.4%
+  (`results/uncertainty_results.json`).
 
 ---
 
 ## F. Architecture Ablation
 
 `results/architecture_ablation.csv` (5×3 repeated stratified CV, fixed
-feature set):
+Lab-only features):
 
 | Architecture | Params | Macro-F1 (mean±std) |
 |---|---:|---|
-| tiny_16 (plain, 1×16) | 149 | see CSV |
-| plain_32_16 | 837 | see CSV |
-| plain_64_32 (Prompt.md width) | 2,693 | see CSV |
-| plain_64_32_16 (Prompt.md depth) | 3,173 | see CSV |
-| **residual_32_32 (selected)** | **1,477** | **see CSV** |
-| residual_64_64 | 4,997 | see CSV |
+| tiny_16 (plain, 1×16) | 149 | 0.716 ± 0.057 |
+| plain_32_16 | 837 | 0.736 ± 0.074 |
+| plain_64_32 (Prompt.md width) | 2,693 | 0.727 ± 0.070 |
+| plain_64_32_16 (Prompt.md depth) | 3,173 | 0.731 ± 0.074 |
+| **residual_32_32 (selected)** | **1,477** | **0.749 ± 0.080** |
+| residual_64_64 | 4,997 | 0.750 ± 0.069 |
+
+residual_64_64 is marginally ahead of residual_32_32 (Δ=0.001, well
+within 1 std) at 3.4× the parameters — rejected per the "smallest
+competitive model" philosophy (§35). Both residual variants beat every
+plain variant, including ones both wider (plain_64_32) and deeper
+(plain_64_32_16) than the Prompt.md-sized network, supporting the
+residual connection as a genuine, not merely fashionable, improvement at
+this sample size.
 
 ## G. Feature Ablation
 
-`results/feature_ablation.csv` — `lab` (D=3), `lab_hsv` (D=7), `extended`
-(D=9), `lab_deltaE` (D=8), `extended_deltaE` (D=14): all statistically
-indistinguishable; raw Lab selected as the smallest competitive set.
+`results/feature_ablation.csv` (5×3 repeated stratified CV, fixed small
+plain 32-16 MLP so the comparison isolates the feature effect):
+
+| Feature set | Dim | Macro-F1 (mean±std) |
+|---|---:|---|
+| **lab (selected)** | **3** | **0.733 ± 0.078** |
+| lab_hsv | 7 | 0.723 ± 0.068 |
+| extended (+chroma, intensity) | 9 | 0.732 ± 0.088 |
+| lab_deltaE (+ΔE00 to prototypes) | 8 | 0.731 ± 0.091 |
+| extended_deltaE | 14 | 0.723 ± 0.065 |
+
+**Negative result, reported as required by task brief §36**: none of
+HSV, chroma/intensity, or ΔE00-to-prototype features improves macro-F1
+over raw Lab — every candidate's mean sits inside the others' ±1 std
+band, and `extended_deltaE` (the largest, most "sophisticated" feature
+set) is not better than raw Lab despite using 4.7× the input
+dimensionality. Raw Lab is selected as the final feature vector.
 
 ## H. Staged Ablation Study (vs. `Prompt.md` baseline)
 
 `results/ablation_results.csv`, one consistent 5×3 CV protocol throughout:
 
-1. Prompt.md baseline (7-D, min-max, plain 64-32-16, unweighted CE)
-2. + optimized architecture only (residual 32-32)
-3. + train-only z-score normalization
-4. + inverse-frequency class-weighted CE
-5. + final feature set (raw Lab, D=3)
-8. Final complete method (5 + temperature-scaling calibration; ECE
-   reported alongside macro-F1)
+| Stage | Accuracy | Macro-F1 | ECE |
+|---|---:|---:|---:|
+| 1. Prompt.md baseline (7-D w/ ΔE00-derived delta, min-max, plain 64-32-16, unweighted CE) | 0.791 ± 0.060 | 0.714 ± 0.080 | — |
+| 2. + optimized architecture only (residual 32-32) | 0.814 ± 0.052 | 0.758 ± 0.073 | — |
+| 3. + train-only z-score normalization | 0.813 ± 0.050 | 0.756 ± 0.071 | — |
+| 4. + inverse-frequency class-weighted CE | 0.772 ± 0.070 | 0.729 ± 0.080 | — |
+| 5. + final feature set (raw Lab, D=3), still weighted CE | 0.793 ± 0.071 | 0.749 ± 0.080 | — |
+| 6. Lab features, **unweighted** CE (weighting reverted) | **0.839 ± 0.047** | **0.783 ± 0.068** | — |
+| 8. Final complete method (6 + temperature-scaling calibration) | 0.839 ± 0.047 | 0.783 ± 0.068 | 0.102 |
+
+**Second negative result**: inverse-frequency class weighting (stage 4)
+*reduces* mean macro-F1 relative to stage 3 (0.756→0.729) despite the
+44%/11% class imbalance documented in §A.2. With only ~30–40 training
+examples per minority class per fold, per-class gradient reweighting
+appears to add more optimization noise than it removes bias, on this
+dataset size. The final configuration therefore uses **unweighted**
+cross-entropy (stage 6/8), which is also the single best-performing
+stage in the whole table — improving over the Prompt.md baseline by
++0.069 macro-F1 (≈0.9 std) under an identical CV protocol, i.e. purely
+from (a) the residual architecture, (b) train-only z-score
+normalization, and (c) dropping the leakage-adjacent `delta`/H/S/V
+features in favor of raw Lab. This traceable, stage-by-stage account is
+the honest answer to "does every retained component earn its place"
+(task brief §7): the residual block and z-score normalization did;
+class weighting, on this dataset, did not, and per-class recall (not
+just aggregate macro-F1) should be monitored if the deployed model is
+retrained on a larger, more imbalanced corpus where reweighting may
+behave differently.
 
 ---
 
-## I. Complexity
+## I. Complexity, Interpretability & Deployment Validation
 
-`results/complexity_report.json`: trainable parameters, FP32 size (KB),
-approximate MACs, CPU latency at batch sizes {1,32,256} (mean/median/p95,
-single-threaded). `results/quantization_comparison.json`: dynamic INT8
-vs. FP32 — macro-F1 drop, top-1 agreement, mean |Δprobability|, file size,
-latency, and the accept/reject decision against a 0.01 macro-F1-drop
-tolerance.
+**Complexity** (`results/complexity_report.json`, single-threaded CPU):
+
+| | Value |
+|---|---|
+| Trainable parameters | 1,477 |
+| FP32 serialized size | 11.36 KB |
+| Approximate MACs (1 forward pass) | 2,240 |
+| CPU latency, batch=1 (mean) | 0.113 ms |
+
+**Permutation feature importance** (`results/permutation_importance.json`,
+macro-F1 drop when a feature is shuffled, n=30 repeats, test split):
+
+| Feature | Mean F1 drop |
+|---|---:|
+| b* (yellow–blue) | 0.449 |
+| L* (lightness) | 0.308 |
+| a* (green–red) | 0.226 |
+
+b\* is the single most discriminative axis — consistent with the
+taxonomy separating dark/near-neutral CuO, warm reddish Cu2O/Healthy, and
+cool blue-green CuCl/CuCl2 primarily along the yellow–blue direction; all
+three channels contribute materially (none is safely droppable), which
+is itself evidence that D=3 (not D=1 or D=2) is the right floor.
+
+**INT8 deployment validation** (`results/quantization_comparison.json`,
+`torch.ao.quantization.quantize_dynamic` on the Linear layers, tested
+end-to-end on the held-out test set, never calibrated on val/test):
+
+| | FP32 | Dynamic INT8 |
+|---|---:|---:|
+| Macro-F1 | 0.850 | 0.821 |
+| Macro-F1 drop | — | 0.029 |
+| Top-1 agreement with FP32 | — | 97.8% |
+| Mean \|Δprobability\| | — | 0.0030 |
+| Serialized size | 11.6 KB | 9.9 KB |
+| CPU latency, batch=1 | 0.135 ms | 0.274 ms |
+
+**Third negative result, reported honestly rather than claimed as a
+win**: quantization is **rejected for deployment** — the macro-F1 drop
+(0.029) exceeds the 0.01 acceptance tolerance from `Prompt.md` §15, and
+INT8 is *slower*, not faster, at this scale (0.274 ms vs. 0.135 ms):
+with only 3 small `Linear` layers, PyTorch's dynamic-quantization
+per-call quantize/dequantize overhead dominates any matmul saving. At
+1,477 parameters and 11 KB, the FP32 model is already so small that
+quantization solves a problem this model doesn't have; **FP32 is the
+recommended deployment artifact**, and this finding is retained rather
+than omitted per task-brief §22/§36 (quantization must be *validated*,
+not assumed beneficial).
 
 ## J. Reproducibility
 

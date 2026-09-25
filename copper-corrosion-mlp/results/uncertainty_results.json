@@ -1,0 +1,9 @@
+{
+  "threshold": {
+    "tau": 0.575,
+    "retained_accuracy": 0.9142857142857143,
+    "coverage": 0.813953488372093
+  },
+  "test_coverage": 0.9555555555555556,
+  "test_retained_accuracy": 0.8837209302325582
+}

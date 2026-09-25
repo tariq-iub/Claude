@@ -1,0 +1,82 @@
+{
+  "seeds": [
+    11,
+    23,
+    37,
+    53,
+    71
+  ],
+  "test_accuracy": {
+    "mean": 0.8266666666666665,
+    "std": 0.038232556742411654
+  },
+  "test_balanced_accuracy": {
+    "mean": 0.7738947368421052,
+    "std": 0.05314359752857491
+  },
+  "test_macro_f1": {
+    "mean": 0.7704148888047657,
+    "std": 0.0584458272383296
+  },
+  "test_weighted_f1": {
+    "mean": 0.8086828508000418,
+    "std": 0.048996818023901045
+  },
+  "per_seed": [
+    {
+      "seed": 11,
+      "test_accuracy": 0.8888888888888888,
+      "test_balanced_accuracy": 0.8571428571428571,
+      "test_macro_f1": 0.8498501498501498,
+      "test_weighted_f1": 0.8837865837865837,
+      "train_accuracy": 0.8712871287128713,
+      "val_accuracy": 0.8372093023255814,
+      "best_epoch": 113,
+      "stopping_reason": "no val_loss improvement for 30 epochs"
+    },
+    {
+      "seed": 23,
+      "test_accuracy": 0.7777777777777778,
+      "test_balanced_accuracy": 0.6914285714285715,
+      "test_macro_f1": 0.6878804855275443,
+      "test_weighted_f1": 0.7496213300134869,
+      "train_accuracy": 0.8861386138613861,
+      "val_accuracy": 0.7674418604651163,
+      "best_epoch": 107,
+      "stopping_reason": "no val_loss improvement for 30 epochs"
+    },
+    {
+      "seed": 37,
+      "test_accuracy": 0.8,
+      "test_balanced_accuracy": 0.7609022556390977,
+      "test_macro_f1": 0.7286080586080587,
+      "test_weighted_f1": 0.761078551078551,
+      "train_accuracy": 0.8811881188118812,
+      "val_accuracy": 0.8372093023255814,
+      "best_epoch": 124,
+      "stopping_reason": "no val_loss improvement for 30 epochs"
+    },
+    {
+      "seed": 53,
+      "test_accuracy": 0.8222222222222222,
+      "test_balanced_accuracy": 0.7714285714285715,
+      "test_macro_f1": 0.7683566433566433,
+      "test_weighted_f1": 0.817035742035742,
+      "train_accuracy": 0.8712871287128713,
+      "val_accuracy": 0.8604651162790697,
+      "best_epoch": 107,
+      "stopping_reason": "no val_loss improvement for 30 epochs"
+    },
+    {
+      "seed": 71,
+      "test_accuracy": 0.8444444444444444,
+      "test_balanced_accuracy": 0.7885714285714286,
+      "test_macro_f1": 0.8173791066814322,
+      "test_weighted_f1": 0.8318920470858455,
+      "train_accuracy": 0.8663366336633663,
+      "val_accuracy": 0.8837209302325582,
+      "best_epoch": 52,
+      "stopping_reason": "no val_loss improvement for 30 epochs"
+    }
+  ]
+}

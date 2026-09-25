@@ -1,0 +1,13 @@
+{
+  "fp32_macro_f1": 0.8498501498501498,
+  "int8_macro_f1": 0.8208391608391608,
+  "macro_f1_drop": 0.029010989010989086,
+  "top1_agreement": 0.9777777777777777,
+  "mean_abs_prob_diff": 0.003015476278960705,
+  "fp32_size_bytes": 11635,
+  "int8_size_bytes": 9889,
+  "fp32_latency_ms_bs1": 0.1347293999970134,
+  "int8_latency_ms_bs1": 0.2737480999712716,
+  "max_macro_f1_drop_tolerance": 0.01,
+  "accepted_for_deployment": false
+}

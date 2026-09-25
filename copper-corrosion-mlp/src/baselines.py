@@ -22,7 +22,6 @@ def nearest_centroid_euclidean(X_train, y_train, X_query, n_classes) -> np.ndarr
 
 
 def logistic_regression_baseline(X_train, y_train, X_query, class_weight="balanced", seed=42):
-    clf = LogisticRegression(max_iter=2000, multi_class="multinomial", class_weight=class_weight,
-                              random_state=seed)
+    clf = LogisticRegression(max_iter=2000, class_weight=class_weight, random_state=seed)
     clf.fit(X_train, y_train)
     return clf.predict(X_query), clf
