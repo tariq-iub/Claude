@@ -1,0 +1,92 @@
+{
+  "tiny_16": {
+    "macro_f1_mean": 0.7157713627024943,
+    "macro_f1_std": 0.056704879411338865,
+    "n_params": 149,
+    "config": {
+      "kind": "plain",
+      "hidden_dims": [
+        16
+      ],
+      "activation": "relu",
+      "dropout": 0.0,
+      "batchnorm": false
+    }
+  },
+  "plain_32_16": {
+    "macro_f1_mean": 0.7362489195741933,
+    "macro_f1_std": 0.07426187426604237,
+    "n_params": 837,
+    "config": {
+      "kind": "plain",
+      "hidden_dims": [
+        32,
+        16
+      ],
+      "activation": "gelu",
+      "dropout": 0.1,
+      "batchnorm": true
+    }
+  },
+  "plain_64_32": {
+    "macro_f1_mean": 0.7266913300756638,
+    "macro_f1_std": 0.0701772924777623,
+    "n_params": 2693,
+    "config": {
+      "kind": "plain",
+      "hidden_dims": [
+        64,
+        32
+      ],
+      "activation": "relu",
+      "dropout": 0.15,
+      "batchnorm": true
+    }
+  },
+  "plain_64_32_16": {
+    "macro_f1_mean": 0.7312575526791849,
+    "macro_f1_std": 0.07394595106459591,
+    "n_params": 3173,
+    "config": {
+      "kind": "plain",
+      "hidden_dims": [
+        64,
+        32,
+        16
+      ],
+      "activation": "relu",
+      "dropout": 0.15,
+      "batchnorm": true
+    }
+  },
+  "residual_32_32": {
+    "macro_f1_mean": 0.7492375855148957,
+    "macro_f1_std": 0.0798856232170382,
+    "n_params": 1477,
+    "config": {
+      "kind": "residual",
+      "hidden_dims": [
+        32,
+        32
+      ],
+      "activation": "gelu",
+      "dropout": 0.2,
+      "batchnorm": true
+    }
+  },
+  "residual_64_64": {
+    "macro_f1_mean": 0.7502190714713421,
+    "macro_f1_std": 0.06901392986164402,
+    "n_params": 4997,
+    "config": {
+      "kind": "residual",
+      "hidden_dims": [
+        64,
+        64
+      ],
+      "activation": "silu",
+      "dropout": 0.2,
+      "batchnorm": true
+    }
+  }
+}
