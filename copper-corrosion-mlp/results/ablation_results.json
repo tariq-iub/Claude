@@ -23,17 +23,23 @@
     "accuracy_mean": 0.7724137931034484,
     "accuracy_std": 0.06959482989986483
   },
-  "5_final_feature_set_lab_only": {
+  "5_final_feature_set_lab_only_weighted": {
     "macro_f1_mean": 0.7492375855148957,
     "macro_f1_std": 0.0798856232170382,
     "accuracy_mean": 0.793103448275862,
     "accuracy_std": 0.07122727993025132
   },
+  "6_final_feature_set_unweighted": {
+    "macro_f1_mean": 0.7834613884516293,
+    "macro_f1_std": 0.06798476873679359,
+    "accuracy_mean": 0.8390804597701148,
+    "accuracy_std": 0.047392018685260454
+  },
   "8_final_complete_with_calibration": {
-    "macro_f1_mean": 0.7492375855148957,
-    "macro_f1_std": 0.0798856232170382,
-    "accuracy_mean": 0.793103448275862,
-    "accuracy_std": 0.07122727993025132,
-    "ece_mean": 0.1205333262853239
+    "macro_f1_mean": 0.7834613884516293,
+    "macro_f1_std": 0.06798476873679359,
+    "accuracy_mean": 0.8390804597701148,
+    "accuracy_std": 0.047392018685260454,
+    "ece_mean": 0.10189927710198811
   }
 }
