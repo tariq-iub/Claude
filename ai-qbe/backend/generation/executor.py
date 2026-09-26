@@ -17,7 +17,22 @@ requesting more until the job's requested_count of PENDING_REVIEW-eligible
 candidates is reached or `job.max_attempts` rounds are exhausted
 (section 30). Generation and validation remain separate function
 calls/stages even within a batch: every item in a batch response is
-structurally validated independently before any status decision.
+validated independently before any status decision.
+
+Phase 7 adds the full QA pipeline to that per-item validation, run in
+order after structural + notation validation both pass: semantic
+deduplication (backend/validation/dedup.py) against every still-alive
+candidate ever generated for the subject/topic, distractor quality
+(backend/validation/distractor.py), independent answer verification
+(backend/validation/answer_verification.py -- SymPy where a clean
+computation is extractable, an LLM verifier pass otherwise; never the
+generator's own claimed answer taken on faith), a difficulty/Bloom
+cross-check (recorded only, never blocking), and a composite quality
+score (backend/validation/quality_score.py) derived solely from those
+validators' outputs. A candidate can now end at PENDING_REVIEW, INVALID,
+REJECTED, DUPLICATE, or LOW_CONFIDENCE (quality score below
+`settings.quality_score_low_confidence_threshold`) -- only PENDING_REVIEW
+counts toward a job's requested_count target.
 
 Every candidate — valid or not — is persisted with full provenance
 (job, topic, prompt template, model, model version, and — in RAG mode —
@@ -43,14 +58,20 @@ from backend.database.models import (
     GenerationModel,
     MCQCandidate,
     MCQOption,
+    MCQQualityScore,
     MCQSource,
     MCQValidationResult,
     PromptTemplate,
 )
-from backend.domain.enums import BloomLevel, DifficultyLevel, GenerationJobStatus, MCQStatus
+from backend.domain.enums import BloomLevel, DifficultyLevel, GenerationJobStatus, MCQStatus, TERMINAL_REJECTED_STATUSES
 from backend.embeddings.base import IEmbeddingProvider
 from backend.generation.planner import PlanCell, allocate_topic_counts, build_plan
+from backend.validation.answer_verification import verify_answer
+from backend.validation.dedup import ExistingCandidate, check_duplicate
+from backend.validation.difficulty_bloom import check_difficulty_bloom
+from backend.validation.distractor import validate_distractors
 from backend.validation.notation import validate_notation
+from backend.validation.quality_score import compute_quality_score
 from backend.validation.structural import validate_mcq_structure
 from llm.providers.base import ILLMProvider
 from rag.knowledge_pack import build_topic_knowledge_pack
@@ -181,12 +202,19 @@ def run_generation_job(
     db.add(GenerationMetric(generation_job_id=job.id, metric_name="rounds_used", metric_value=round_number))
 
     job.generated_count = total_generated
+    # rejected_count is the broad "did not reach PENDING_REVIEW" bucket
+    # (INVALID + REJECTED + DUPLICATE + LOW_CONFIDENCE combined);
+    # duplicate_count below is the precise subset of those specifically
+    # caught by deduplication, since the schema gives it its own column.
     job.rejected_count = total_rejected
-    # No independent fact/dedup/quality pipeline yet (Phase 7), so
-    # "reaching PENDING_REVIEW" is as far as this job's own counters go --
-    # an actual human reviewer decision is still required before anything
-    # is APPROVED. job.approved_count is updated for real once reviews
-    # start landing (see api/routers/questions.py).
+    job.duplicate_count = (
+        db.query(MCQCandidate).filter_by(generation_job_id=job.id, status=MCQStatus.DUPLICATE).count()
+    )
+    # The QA pipeline (Phase 7: dedup, distractor validation, independent
+    # answer verification, quality scoring) still stops at PENDING_REVIEW,
+    # never APPROVED -- an actual human reviewer decision is still required.
+    # job.approved_count is updated for real once reviews start landing
+    # (see api/routers/questions.py).
     job.status = GenerationJobStatus.COMPLETED
     job.completed_at = datetime.now(timezone.utc)
     db.flush()
@@ -314,7 +342,10 @@ def _generate_batch_for_cell(
     outcomes = []
     for raw_item in items:
         candidate = _new_candidate(db, job, topic, prompt_template, provider, cell)
-        is_valid = _apply_parsed_item(db, candidate, raw_item, source_chunk_ids)
+        is_valid = _apply_parsed_item(
+            db, job, topic, provider, candidate, raw_item, source_chunk_ids,
+            context=context, embedding_provider=embedding_provider,
+        )
         outcomes.append((candidate, is_valid))
     return outcomes
 
@@ -344,10 +375,45 @@ def _new_candidate(
     return candidate
 
 
-def _apply_parsed_item(db: Session, candidate: MCQCandidate, raw_item, source_chunk_ids: list[int]) -> bool:
-    """Validates one already-parsed item dict and writes its options/
-    sources/status onto `candidate`. Returns True if it reached
-    PENDING_REVIEW."""
+def _fetch_dedup_pool(db: Session, job: GenerationJob, topic: GenerationJobTopic, exclude_candidate_id: int) -> list[ExistingCandidate]:
+    """Candidates to compare a new one against for semantic deduplication:
+    every still-alive (non-terminal-rejected) candidate ever generated for
+    the same subject+topic, across ALL jobs -- a growing question bank
+    should never accumulate near-duplicates just because they came from
+    different generation runs.
+    """
+    rows = (
+        db.query(MCQCandidate)
+        .join(GenerationJobTopic, MCQCandidate.generation_job_topic_id == GenerationJobTopic.id)
+        .join(GenerationJob, MCQCandidate.generation_job_id == GenerationJob.id)
+        .filter(GenerationJob.external_subject_id == job.external_subject_id)
+        .filter(GenerationJobTopic.external_topic_id == topic.external_topic_id)
+        .filter(MCQCandidate.status.notin_(TERMINAL_REJECTED_STATUSES))
+        .filter(MCQCandidate.id != exclude_candidate_id)
+        .filter(MCQCandidate.question_stem != "")
+        .all()
+    )
+    return [ExistingCandidate(id=r.id, question_stem=r.question_stem) for r in rows]
+
+
+def _apply_parsed_item(
+    db: Session,
+    job: GenerationJob,
+    topic: GenerationJobTopic,
+    provider: ILLMProvider,
+    candidate: MCQCandidate,
+    raw_item,
+    source_chunk_ids: list[int],
+    *,
+    context: str = "",
+    embedding_provider: IEmbeddingProvider | None = None,
+) -> bool:
+    """Validates one already-parsed item dict, runs it through the full
+    Phase 7 QA pipeline (structural -> notation -> deduplication ->
+    distractor quality -> independent answer verification -> difficulty/
+    Bloom cross-check -> composite quality score), and writes the result
+    onto `candidate`. Returns True if it reached PENDING_REVIEW.
+    """
     if not isinstance(raw_item, dict):
         candidate.question_stem = "(malformed batch item)"
         candidate.status = MCQStatus.INVALID
@@ -410,12 +476,129 @@ def _apply_parsed_item(db: Session, candidate: MCQCandidate, raw_item, source_ch
 
     for chunk_id in source_chunk_ids:
         db.add(MCQSource(mcq_candidate_id=candidate.id, document_chunk_id=chunk_id))
+    db.flush()
 
-    # Structural validation only so far -> straight to PENDING_REVIEW,
-    # skipping FACT_VALIDATED / DEDUPLICATED / QUALITY_CHECKED, which don't
-    # exist until Phase 7. Every question generated so far needs human
-    # review before approval precisely because independent fact
-    # verification isn't wired up yet.
+    options = raw_item["options"]
+    correct_option = raw_item["correct_option"]
+
+    # --- Semantic deduplication (4 levels: hash -> lexical -> embedding
+    # -> LLM-judge tie-break for the borderline band) ---------------------
+    dedup_pool = _fetch_dedup_pool(db, job, topic, exclude_candidate_id=candidate.id)
+    dedup = check_duplicate(
+        candidate.question_stem, dedup_pool, embedding_provider=embedding_provider, llm_provider=provider
+    )
+    db.add(
+        MCQValidationResult(
+            mcq_candidate_id=candidate.id,
+            validator_name="dedup",
+            stage="dedup",
+            result="fail" if dedup.is_duplicate else "pass",
+            details={"method": dedup.method, "matched_candidate_id": dedup.matched_candidate_id, "score": dedup.score, "reason": dedup.reason},
+        )
+    )
+    if dedup.is_duplicate:
+        candidate.status = MCQStatus.DUPLICATE
+        db.flush()
+        return False
+
+    # --- Distractor quality (near-duplicate options, possible second
+    # correct answer, length outliers) ------------------------------------
+    distractor = validate_distractors(options, correct_option, embedding_provider=embedding_provider)
+    db.add(
+        MCQValidationResult(
+            mcq_candidate_id=candidate.id,
+            validator_name="distractor",
+            stage="distractor",
+            result="pass" if distractor.passed else "fail",
+            details={"reasons": distractor.reasons, "flags": distractor.flags, "embedding_checked": distractor.embedding_checked},
+        )
+    )
+    if not distractor.passed:
+        candidate.status = MCQStatus.REJECTED
+        db.flush()
+        return False
+
+    # --- Independent answer verification (never trust the generator's own
+    # claimed correct_option) --------------------------------------------
+    answer_verification = verify_answer(
+        provider, question_stem=candidate.question_stem, options=options, correct_option=correct_option, context=context
+    )
+    db.add(
+        MCQValidationResult(
+            mcq_candidate_id=candidate.id,
+            validator_name="answer_verifier",
+            stage="answer_verification",
+            result=answer_verification.verdict.lower() if answer_verification.verdict != "UNCERTAIN" else "uncertain",
+            details={
+                "method": answer_verification.method,
+                "confidence": answer_verification.confidence,
+                "reason": answer_verification.reason,
+                "derived_correct_option": answer_verification.derived_correct_option,
+            },
+        )
+    )
+    if answer_verification.verdict == "FAIL":
+        candidate.status = MCQStatus.REJECTED
+        db.flush()
+        return False
+
+    # --- Difficulty/Bloom cross-check: recorded only, never blocking; a
+    # reviewer already has change_difficulty/change_bloom actions ---------
+    diff_bloom = check_difficulty_bloom(candidate.question_stem, options, candidate.bloom_level, candidate.difficulty)
+    db.add(
+        MCQValidationResult(
+            mcq_candidate_id=candidate.id,
+            validator_name="difficulty_bloom",
+            stage="difficulty_bloom",
+            result="pass" if not diff_bloom.notes else "uncertain",
+            details={
+                "estimated_bloom": diff_bloom.estimated_bloom.value if diff_bloom.estimated_bloom else None,
+                "estimated_difficulty": diff_bloom.estimated_difficulty.value if diff_bloom.estimated_difficulty else None,
+                "notes": diff_bloom.notes,
+            },
+        )
+    )
+
+    # --- Composite quality score, derived only from the validators above,
+    # never from the generator's own self-reported confidence -------------
+    quality = compute_quality_score(
+        structural=validation,
+        notation=notation,
+        answer_verification=answer_verification,
+        distractor=distractor,
+        dedup=dedup,
+        difficulty_bloom=diff_bloom,
+        has_sources=len(source_chunk_ids) > 0,
+        used_manual_context=bool(topic.manual_context),
+        had_any_context=bool(context),
+    )
+    db.add(
+        MCQQualityScore(
+            mcq_candidate_id=candidate.id,
+            factual_correctness=quality.factual_correctness,
+            source_grounding=quality.source_grounding,
+            clarity=quality.clarity,
+            distractor_quality=quality.distractor_quality,
+            single_correctness=quality.single_correctness,
+            difficulty_match=quality.difficulty_match,
+            bloom_match=quality.bloom_match,
+            option_conciseness=quality.option_conciseness,
+            notation_validity=quality.notation_validity,
+            duplicate_risk=quality.duplicate_risk,
+            composite_score=quality.composite_score,
+        )
+    )
+
+    # A candidate scoring below the configured threshold still isn't
+    # discarded (its content may well be salvageable) but is kept out of
+    # the PENDING_REVIEW pool that counts toward the job's requested
+    # target -- low-confidence items get their own reviewable status
+    # rather than diluting the main review queue silently.
+    if quality.composite_score < settings.quality_score_low_confidence_threshold:
+        candidate.status = MCQStatus.LOW_CONFIDENCE
+        db.flush()
+        return False
+
     candidate.status = MCQStatus.PENDING_REVIEW
     db.flush()
     return True
@@ -482,7 +665,10 @@ def _generate_one(
         db.flush()
         return candidate, False
 
-    is_valid = _apply_parsed_item(db, candidate, parsed, source_chunk_ids)
+    is_valid = _apply_parsed_item(
+        db, job, topic, provider, candidate, parsed, source_chunk_ids,
+        context=context, embedding_provider=embedding_provider,
+    )
     return candidate, is_valid
 
 

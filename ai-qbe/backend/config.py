@@ -69,5 +69,11 @@ class Settings(BaseSettings):
     # used; this is only a hard ceiling against a misconfigured job.
     generation_max_rounds_ceiling: int = 10
 
+    # Quality Assurance pipeline (Phase 7). A candidate scoring below this
+    # composite (0-100, docs/PHASE0-DESIGN.md section 25) still isn't
+    # discarded -- it's marked LOW_CONFIDENCE rather than PENDING_REVIEW,
+    # kept out of the count that satisfies a job's requested_count target.
+    quality_score_low_confidence_threshold: float = 50.0
+
 
 settings = Settings()

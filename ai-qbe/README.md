@@ -41,13 +41,19 @@ academic review.
   validation (via a Node subprocess), chemistry formula/equation-balance
   checking, physics unit-presence flags, and the generation-time
   notation gate that blocks malformed candidates before human review.
+- [`docs/PHASE7-QA-PIPELINE.md`](docs/PHASE7-QA-PIPELINE.md) — the Phase 7
+  quality assurance pipeline: SymPy/LLM independent answer verification,
+  distractor quality checks, 4-level semantic deduplication (including a
+  gated LLM-judge tie-break), difficulty/Bloom cross-checking, and a
+  composite quality score derived only from validator outputs.
 - [`llm/`](llm) — the model-independent `ILLMProvider` interface (Ollama /
   llama.cpp / OpenAI-compatible / mock backends) and the JSON Schemas
   generation and verification calls must satisfy.
 - [`backend/`](backend) — the FastAPI application: database models &
   migrations, the academic-data adapter, embedding provider abstraction,
   the generation planner/executor (manual-context and RAG modes, batched
-  generation, over-generation rounds), structural validation, security
+  generation, over-generation rounds, the full Phase 7 QA pipeline),
+  structural/notation/answer/distractor/dedup validation, security
   (auth/RBAC/audit), REST API routers, and Celery worker tasks.
 - [`rag/`](rag) — document extraction (PDF/text), semantic chunking, the
   vector-store abstraction (Qdrant), the ingestion pipeline, Topic
@@ -60,43 +66,57 @@ academic review.
 - [`scripts/benchmark/`](scripts/benchmark) — the ~100-task benchmark set
   (MCQ generation, answer verification, JSON-compliance stress, SymPy-
   checkable math) plus the runnable harness and report template.
-- [`tests/`](tests) — 215 passing tests covering the benchmark grading
+- [`tests/`](tests) — 274 passing tests covering the benchmark grading
   logic and fixtures, the planner's apportionment math (including the
-  full topic × difficulty × Bloom × question-type split), structural and
-  scientific-notation validation, batched generation (one-LLM-call-per-
-  batch, multi-batch splitting, item distinctness), over-generation round
-  escalation and exhaustion, end-to-end generation-job execution
-  (manual-context and RAG modes), a full API integration flow (auth/RBAC,
-  job lifecycle, review actions, versioning, regenerate, document upload,
-  RAG-grounded generation with citations), a real Alembic upgrade/
-  downgrade round-trip, real PDF extraction, semantic chunking, real
-  Qdrant vector-store behavior, domain-policy enforcement, HTML
-  sanitization, prompt-injection scrubbing, a full web-ingestion flow
-  against a simulated malicious page, and a seeded valid/malformed
-  notation set run against real MathJax with zero false positives/negatives.
+  full topic × difficulty × Bloom × question-type split), structural,
+  scientific-notation, and full QA-pipeline validation, batched
+  generation (one-LLM-call-per-batch, multi-batch splitting, item
+  distinctness), over-generation round escalation and exhaustion,
+  end-to-end generation-job execution (manual-context and RAG modes,
+  independent answer verification, cross-job deduplication), a full API
+  integration flow (auth/RBAC, job lifecycle, review actions, versioning,
+  regenerate, document upload, RAG-grounded generation with citations,
+  quality scores and QA results exposed through the review endpoints), a
+  real Alembic upgrade/downgrade round-trip, real PDF extraction,
+  semantic chunking, real Qdrant vector-store behavior, domain-policy
+  enforcement, HTML sanitization, prompt-injection scrubbing, a full
+  web-ingestion flow against a simulated malicious page, and a seeded
+  valid/malformed notation set run against real MathJax with zero false
+  positives/negatives.
 
 ## Status
 
-**Phase 6 — Scientific Content Support.** Implemented and tested
-(`python3 -m pytest ai-qbe/tests -q` → 215 passed). Generated MCQs
-containing math, physics, or chemistry notation are now checked against
-**real MathJax** (a Node subprocess running `mathjax-full` — the same
-library that will render questions in the eventual review UI, not an
-approximation) plus independent chemistry-content checks (element-symbol
-validity, reaction-equation atom-balance — catching things like an
-unbalanced `H2 + O2 -> H2O` that valid-but-wrong LaTeX would sail through)
-and a soft physics-unit-presence check. A candidate with malformed
-notation is now blocked from reaching human review at generation time,
-with the specific reason recorded for audit.
+**Phase 7 — Quality Assurance Pipeline.** Implemented and tested
+(`python3 -m pytest ai-qbe/tests -q` → 274 passed). This is the phase the
+master prompt marks mandatory before production use. Every generated
+candidate now runs through independent answer verification (SymPy for
+clean computable questions, an LLM verifier pass otherwise — never the
+generator's own claimed answer taken on faith), distractor quality checks
+(near-duplicate options, a "possible second correct answer" flag, length
+outliers), 4-level semantic deduplication (exact hash → lexical →
+embedding → a genuinely-gated LLM-judge tie-break for the borderline
+band, compared against every still-alive candidate ever generated for the
+same subject/topic across all jobs — not just the current one), a
+difficulty/Bloom cross-check, and a composite quality score derived
+solely from those validators' outputs (verified by an AST-inspection
+test, not just asserted in a docstring). A candidate can now land at
+`PENDING_REVIEW`, `REJECTED`, `DUPLICATE`, or `LOW_CONFIDENCE` — only the
+first counts toward a job's requested target, so Phase 5's over-generation
+loop now compensates for real rejection reasons, not just structural
+ones. Building this surfaced and fixed a real bug: `MockProvider`'s
+templated output was ~99% lexically similar between consecutive items,
+so the new dedup logic correctly flagged nearly everything it generated
+as duplicates of itself — fixed by giving the mock 40 wholesale-distinct
+question stems instead of one template with a trailing counter.
 
-This is the first phase where "renders correctly" is verified against the
-real target technology rather than deferred pending hardware/network
-access — Node and MathJax need no external network access to check
-notation once installed, unlike an LLM, an embedding model, or a live web
-fetch. Those three remain unreal for the reasons stated in earlier
-phases' notes: this sandbox's network policy blocks arbitrary outbound
-requests, confirmed directly against multiple hosts (huggingface.co,
-ollama.com, example.com). Also correctly out of scope until later phases:
-independent fact-verification / deduplication / quality scoring /
-concept-coverage diversity metrics (Phase 7) — which is why nothing is
-auto-approved yet.
+Still unreal for the same standing reasons as every earlier phase
+touching inference: no real LLM (verification and the dedup judge both
+run against `MockProvider`) and no real semantic embedding model
+(distractor/dedup embedding checks are bounded by the lexical
+`HashingEmbeddingProvider` from Phase 3 — a paraphrase-level duplicate
+like "What is the SI unit of force?" vs. "Force is measured in which SI
+unit?" won't be caught until a real semantic model is wired in). Also
+correctly out of scope until later phases: concept-coverage diversity
+metrics across an entire approved bank (Phase 9) and the human review UI
+itself (Phase 8) — which is why nothing is auto-approved yet, even though
+everything needed to inform that decision is now computed and stored.

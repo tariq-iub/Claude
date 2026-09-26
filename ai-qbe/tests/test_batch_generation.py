@@ -40,16 +40,24 @@ def db_session():
 
 
 class CountingProvider(MockProvider):
-    """Wraps MockProvider to count how many generate_structured calls
-    happen -- the whole point of batching is fewer LLM calls for the same
-    number of questions."""
+    """Wraps MockProvider to count how many *batch-generation* calls
+    happen -- the whole point of batching is fewer generation LLM calls
+    for the same number of questions. Phase 7's QA pipeline adds its own
+    legitimate per-item LLM calls (answer verification, occasional
+    dedup judge tie-breaks), which are counted separately so they don't
+    conflate "batching worked" with "the QA pipeline also calls the LLM,
+    which it's supposed to"."""
 
     def __init__(self):
         super().__init__("counting-mock")
-        self.call_count = 0
+        self.batch_call_count = 0
+        self.other_call_count = 0
 
     def generate_structured(self, prompt, *, json_schema, **kwargs):
-        self.call_count += 1
+        if "items" in json_schema.get("properties", {}):
+            self.batch_call_count += 1
+        else:
+            self.other_call_count += 1
         return super().generate_structured(prompt, json_schema=json_schema, **kwargs)
 
 
@@ -100,7 +108,7 @@ def test_run_generation_job_uses_one_call_per_batch_not_per_question(db_session)
     result = run_generation_job(db_session, job, provider, template)
 
     assert result.generated_count == 15
-    assert provider.call_count == 1  # one batch call, not 15 single-item calls
+    assert provider.batch_call_count == 1  # one batch call, not 15 single-item calls
 
 
 def test_batch_exceeding_max_batch_size_splits_into_multiple_calls(db_session, monkeypatch):
@@ -145,7 +153,7 @@ def test_batch_exceeding_max_batch_size_splits_into_multiple_calls(db_session, m
     result = run_generation_job(db_session, job, provider, template)
 
     assert result.generated_count == 25
-    assert provider.call_count == 3  # 10 + 10 + 5
+    assert provider.batch_call_count == 3  # 10 + 10 + 5
 
 
 def test_batch_items_are_distinct_not_identical_copies(db_session):

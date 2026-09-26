@@ -183,6 +183,22 @@ class MCQValidationResultOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MCQQualityScoreOut(BaseModel):
+    factual_correctness: float | None
+    source_grounding: float | None
+    clarity: float | None
+    distractor_quality: float | None
+    single_correctness: float | None
+    difficulty_match: float | None
+    bloom_match: float | None
+    option_conciseness: float | None
+    notation_validity: float | None
+    duplicate_risk: float | None
+    composite_score: float
+
+    model_config = {"from_attributes": True}
+
+
 class MCQCandidateOut(BaseModel):
     id: int
     generation_job_id: int
@@ -196,6 +212,7 @@ class MCQCandidateOut(BaseModel):
     options: list[MCQOptionOut]
     validation_results: list[MCQValidationResultOut] = []
     source_chunk_ids: list[int] = []
+    quality_score: MCQQualityScoreOut | None = None
 
     model_config = {"from_attributes": True}
 
