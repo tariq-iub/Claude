@@ -43,5 +43,17 @@ class Settings(BaseSettings):
     # 'http://localhost:6333'.
     vector_store_location: str = ":memory:"
 
+    # Controlled Internet research (Phase 4). Internet retrieval is
+    # opt-in per generation job (GenerationJobCreate) and additionally
+    # gated by the approved-domains list (rag/web/domain_policy.py) --
+    # these settings only affect HOW an already-approved fetch behaves.
+    web_fetch_timeout_seconds: float = 15.0
+    web_fetch_max_bytes: int = 20 * 1024 * 1024
+    web_fetch_respect_robots_txt: bool = True
+    # None (default) leaves search disabled (NullSearchAdapter): an
+    # institution wanting web discovery, not just direct URL ingestion,
+    # points this at its own self-hosted SearXNG instance.
+    searxng_base_url: str | None = None
+
 
 settings = Settings()

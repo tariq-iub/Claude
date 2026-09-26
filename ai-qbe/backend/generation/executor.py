@@ -50,6 +50,7 @@ from backend.validation.structural import validate_mcq_structure
 from llm.providers.base import ILLMProvider
 from rag.knowledge_pack import build_topic_knowledge_pack
 from rag.vectorstore import IVectorStore
+from rag.web.injection_defense import wrap_context_as_data
 
 logger = logging.getLogger(__name__)
 
@@ -161,8 +162,15 @@ def _generate_one(
     context, source_chunk_ids = resolve_topic_context(
         job, topic, vector_store=vector_store, embedding_provider=embedding_provider
     )
+    # Retrieved/manual context may originate from uploaded documents or
+    # (Phase 4) approved-domain web pages -- either way it is untrusted
+    # data, never instructions, per docs/PHASE0-DESIGN.md section 9.
+    # wrap_context_as_data() is the second, independent layer of defense
+    # alongside the ingestion-time regex scrub in
+    # rag/web/injection_defense.py.
+    context_block = wrap_context_as_data(context) if context else "(no supporting context available)"
     prompt = (
-        f"Context:\n{context}\n\n"
+        f"Context:\n{context_block}\n\n"
         f"Instruction:\nGenerate ONE multiple-choice question about "
         f"'{topic.topic_label_snapshot}' at Bloom level '{cell.bloom_level}' and "
         f"difficulty '{cell.difficulty}', with {job.option_count} options, grounded "

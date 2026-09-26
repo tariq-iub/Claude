@@ -1,17 +1,24 @@
-"""Document ingestion endpoints (Phase 3: instructor-provided material).
-
-Internet-sourced documents (Phase 4's approved-domain retrieval) will
-reuse the same `rag.ingestion.ingest_document` pipeline and land in the
-same `academic_sources` / `document_chunks` tables -- only how the bytes
-arrive differs (upload here vs. a fetch-and-sanitize step in Phase 4).
+"""Document ingestion endpoints: instructor-provided uploads (Phase 3) and
+approved-domain web ingestion (Phase 4). Both land in the same
+`academic_sources` / `document_chunks` tables -- only how the bytes
+arrive differs.
 """
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from backend.api.deps import get_academic_port, get_db, get_embedding_provider, get_vector_store
+from backend.api.deps import (
+    get_academic_port,
+    get_db,
+    get_domain_policy,
+    get_embedding_provider,
+    get_search_adapter,
+    get_vector_store,
+    get_web_fetcher,
+)
 from backend.database.academic_port import AcademicDataPort
 from backend.database.models import AcademicSource, DocumentChunk, SourceDocument
 from backend.embeddings.base import IEmbeddingProvider
@@ -19,6 +26,10 @@ from backend.security.audit import record_audit_event
 from backend.security.rbac import CurrentUser, require_any_authenticated_user, require_job_manager
 from rag.ingestion import ingest_document
 from rag.vectorstore import IVectorStore
+from rag.web.domain_policy import DomainPolicy
+from rag.web.fetch import IWebFetcher
+from rag.web.search import ISearchAdapter
+from rag.web.ingestion import ingest_from_url
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
 
@@ -88,6 +99,99 @@ def upload_source(
         "document_hash": source.document_hash,
         "chunk_count": chunk_count,
     }
+
+
+class FromUrlIn(BaseModel):
+    url: str
+    external_subject_id: str
+    external_topic_id: str | None = None
+    title: str | None = None
+
+
+@router.post("/from-url", status_code=status.HTTP_201_CREATED)
+def ingest_url_source(
+    payload: FromUrlIn,
+    db: Session = Depends(get_db),
+    port: AcademicDataPort = Depends(get_academic_port),
+    domain_policy: DomainPolicy = Depends(get_domain_policy),
+    fetcher: IWebFetcher = Depends(get_web_fetcher),
+    vector_store: IVectorStore = Depends(get_vector_store),
+    embedding_provider: IEmbeddingProvider = Depends(get_embedding_provider),
+    user: CurrentUser = Depends(require_job_manager),
+):
+    """Fetches and ingests one approved-domain URL (docs/PHASE0-DESIGN.md
+    section 8). Rejects with 403 if the URL's domain isn't on the
+    approved list -- there is no path in this endpoint that ingests an
+    unapproved domain, matching "nothing is auto-approved".
+    """
+    if port.get_subject(payload.external_subject_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Unknown subject: {payload.external_subject_id}")
+    if payload.external_topic_id is not None and port.get_topic(payload.external_subject_id, payload.external_topic_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Unknown topic: {payload.external_topic_id}")
+
+    result = ingest_from_url(
+        db,
+        payload.url,
+        external_subject_id=payload.external_subject_id,
+        external_topic_id=payload.external_topic_id,
+        domain_policy=domain_policy,
+        fetcher=fetcher,
+        embedding_provider=embedding_provider,
+        vector_store=vector_store,
+        title=payload.title,
+    )
+    if not result.accepted:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f"URL rejected: {result.reason}")
+
+    record_audit_event(
+        db,
+        actor=user.username,
+        action="ingest_url_source",
+        resource_type="academic_source",
+        resource_id=str(result.source.id) if result.source else None,
+        details={"url": payload.url, "reason": result.reason, "injection_findings_count": len(result.injection_findings)},
+    )
+    db.flush()
+
+    return {
+        "id": result.source.id,
+        "title": result.source.title,
+        "url": result.source.url,
+        "document_hash": result.source.document_hash,
+        "chunk_count": result.chunk_count,
+        "reason": result.reason,
+        "injection_findings_count": len(result.injection_findings),
+    }
+
+
+class SearchQueryIn(BaseModel):
+    query: str
+    max_results: int = 10
+
+
+@router.post("/search-preview")
+def search_preview(
+    payload: SearchQueryIn,
+    db: Session = Depends(get_db),
+    domain_policy: DomainPolicy = Depends(get_domain_policy),
+    search_adapter: ISearchAdapter = Depends(get_search_adapter),
+    _user: CurrentUser = Depends(require_job_manager),
+):
+    """Runs the configured search adapter and annotates each result with
+    whether its domain is currently approved -- a preview/discovery step
+    an administrator uses before deciding what to approve and ingest.
+    This endpoint never ingests anything by itself.
+    """
+    results = search_adapter.search(payload.query, max_results=payload.max_results)
+    return [
+        {
+            "url": r.url,
+            "title": r.title,
+            "snippet": r.snippet,
+            "domain_decision": domain_policy.evaluate(r.url).reason,
+        }
+        for r in results
+    ]
 
 
 @router.get("/{source_id}")

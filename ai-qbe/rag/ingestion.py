@@ -6,6 +6,13 @@ backend/embeddings/, and rag/vectorstore.py.
 Source documents are hash-deduplicated (docs/schema.sql:
 academic_sources.document_hash UNIQUE) so re-uploading the same file for
 the same or a different job is a no-op rather than a duplicate ingestion.
+
+`ingest_pages()` is the shared core used by both this module's
+`ingest_document()` (file upload, Phase 3) and
+`rag.web.ingestion.ingest_from_url()` (Phase 4) -- once content has been
+extracted into `ExtractedPage`s, chunking/embedding/storage is identical
+regardless of whether the bytes came from an upload or an approved-domain
+fetch.
 """
 
 from __future__ import annotations
@@ -17,8 +24,77 @@ from sqlalchemy.orm import Session
 from backend.database.models import AcademicSource, DocumentChunk, SourceDocument
 from backend.embeddings.base import IEmbeddingProvider
 from rag.chunking import semantic_chunk
-from rag.extraction import extract_text
+from rag.extraction import ExtractedPage, extract_text
 from rag.vectorstore import ChunkPoint, IVectorStore
+
+
+def ingest_pages(
+    db: Session,
+    *,
+    source_document: SourceDocument,
+    pages: list[ExtractedPage],
+    external_subject_id: str,
+    external_topic_id: str | None,
+    embedding_provider: IEmbeddingProvider,
+    vector_store: IVectorStore,
+) -> int:
+    """Chunks, embeds, and stores `pages` for an already-created
+    `source_document`. Returns the number of chunks created. Sets
+    `source_document.ingestion_status` to "empty" or "ready" as a side
+    effect.
+    """
+    source_document.page_count = len({p.page for p in pages if p.page is not None}) or None
+
+    all_chunks = []
+    for extracted_page in pages:
+        for chunk in semantic_chunk(extracted_page.text, page=extracted_page.page):
+            all_chunks.append(chunk)
+
+    if not all_chunks:
+        source_document.ingestion_status = "empty"
+        db.flush()
+        return 0
+
+    vectors = embedding_provider.embed_texts([c.text for c in all_chunks])
+
+    chunk_rows = []
+    for i, (chunk, vector) in enumerate(zip(all_chunks, vectors)):
+        row = DocumentChunk(
+            source_document_id=source_document.id,
+            external_subject_id=external_subject_id,
+            external_topic_id=external_topic_id,
+            chunk_index=i,
+            page=chunk.page,
+            section=chunk.section,
+            text=chunk.text,
+            embedding_vector_id="",  # set below once we have the DB id
+            token_count=chunk.word_count,
+        )
+        db.add(row)
+        chunk_rows.append((row, vector))
+
+    db.flush()  # assign chunk row ids
+
+    points = []
+    for row, vector in chunk_rows:
+        row.embedding_vector_id = str(row.id)
+        points.append(
+            ChunkPoint(
+                document_chunk_id=row.id,
+                vector=vector,
+                external_subject_id=external_subject_id,
+                external_topic_id=external_topic_id,
+                source_document_id=source_document.id,
+                page=row.page,
+                section=row.section,
+                text=row.text,
+            )
+        )
+
+    vector_store.upsert(points)
+    source_document.ingestion_status = "ready"
+    db.flush()
+    return len(chunk_rows)
 
 
 def ingest_document(
@@ -63,55 +139,13 @@ def ingest_document(
     db.flush()
 
     pages = extract_text(file_bytes, mime_type)
-    source_document.page_count = len({p.page for p in pages if p.page is not None}) or None
-
-    all_chunks = []
-    for extracted_page in pages:
-        for chunk in semantic_chunk(extracted_page.text, page=extracted_page.page):
-            all_chunks.append(chunk)
-
-    if not all_chunks:
-        source_document.ingestion_status = "empty"
-        db.flush()
-        return source
-
-    vectors = embedding_provider.embed_texts([c.text for c in all_chunks])
-
-    chunk_rows = []
-    for i, (chunk, vector) in enumerate(zip(all_chunks, vectors)):
-        row = DocumentChunk(
-            source_document_id=source_document.id,
-            external_subject_id=external_subject_id,
-            external_topic_id=external_topic_id,
-            chunk_index=i,
-            page=chunk.page,
-            section=chunk.section,
-            text=chunk.text,
-            embedding_vector_id="",  # set below once we have the DB id
-            token_count=chunk.word_count,
-        )
-        db.add(row)
-        chunk_rows.append((row, vector))
-
-    db.flush()  # assign chunk row ids
-
-    points = []
-    for row, vector in chunk_rows:
-        row.embedding_vector_id = str(row.id)
-        points.append(
-            ChunkPoint(
-                document_chunk_id=row.id,
-                vector=vector,
-                external_subject_id=external_subject_id,
-                external_topic_id=external_topic_id,
-                source_document_id=source_document.id,
-                page=row.page,
-                section=row.section,
-                text=row.text,
-            )
-        )
-
-    vector_store.upsert(points)
-    source_document.ingestion_status = "ready"
-    db.flush()
+    ingest_pages(
+        db,
+        source_document=source_document,
+        pages=pages,
+        external_subject_id=external_subject_id,
+        external_topic_id=external_topic_id,
+        embedding_provider=embedding_provider,
+        vector_store=vector_store,
+    )
     return source

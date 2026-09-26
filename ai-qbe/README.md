@@ -28,6 +28,10 @@ academic review.
   pipeline: embedding provider abstraction, Qdrant vector store, PDF/text
   ingestion, semantic chunking, topic-scoped retrieval, Topic Knowledge
   Packs, and citation-tracked generation.
+- [`docs/PHASE4-INTERNET-RESEARCH.md`](docs/PHASE4-INTERNET-RESEARCH.md) —
+  the Phase 4 controlled Internet research pipeline: approved-domain
+  policy (deny-by-default), sandboxed fetching, HTML sanitization,
+  two-layer prompt-injection defense, and web-to-knowledge-pack ingestion.
 - [`llm/`](llm) — the model-independent `ILLMProvider` interface (Ollama /
   llama.cpp / OpenAI-compatible / mock backends) and the JSON Schemas
   generation and verification calls must satisfy.
@@ -37,40 +41,46 @@ academic review.
   validation, security (auth/RBAC/audit), REST API routers, and Celery
   worker tasks.
 - [`rag/`](rag) — document extraction (PDF/text), semantic chunking, the
-  vector-store abstraction (Qdrant), the ingestion pipeline, and Topic
-  Knowledge Pack retrieval.
+  vector-store abstraction (Qdrant), the ingestion pipeline, Topic
+  Knowledge Pack retrieval, and (`rag/web/`) approved-domain search,
+  fetching, sanitization, and prompt-injection defense.
 - [`scripts/benchmark/`](scripts/benchmark) — the ~100-task benchmark set
   (MCQ generation, answer verification, JSON-compliance stress, SymPy-
   checkable math) plus the runnable harness and report template.
-- [`tests/`](tests) — 91 passing tests covering the benchmark grading
+- [`tests/`](tests) — 128 passing tests covering the benchmark grading
   logic and fixtures, the planner's apportionment math, structural
   validation, end-to-end generation-job execution (manual-context and RAG
   modes), a full API integration flow (auth/RBAC, job lifecycle, review
   actions, versioning, document upload, RAG-grounded generation with
   citations), a real Alembic upgrade/downgrade round-trip, real PDF
-  extraction, semantic chunking, and real Qdrant vector-store behavior.
+  extraction, semantic chunking, real Qdrant vector-store behavior,
+  domain-policy enforcement, HTML sanitization, prompt-injection
+  scrubbing, and a full web-ingestion flow against a simulated malicious
+  page.
 
 ## Status
 
-**Phase 3 — Document RAG.** Implemented and tested
-(`python3 -m pytest ai-qbe/tests -q` → 91 passed). Documents (PDF/text/
-Markdown) can be uploaded, cleaned, chunked, embedded, and stored in
-Qdrant with full metadata; generation jobs can now run in **RAG mode**
-(`use_rag: true`), retrieving a Topic Knowledge Pack from ingested
-documents instead of requiring manually-supplied context, with every
-resulting candidate recording exactly which source chunks it was grounded
-in (`MCQSource`, surfaced as `source_chunk_ids` on the question API).
-Manual-context mode (Phase 2) still works unchanged.
+**Phase 4 — Controlled Internet Research.** Implemented and tested
+(`python3 -m pytest ai-qbe/tests -q` → 128 passed). Documents can now be
+ingested from **approved-domain URLs** as well as direct upload: an
+administrator manages an explicit approved/blocked domain list
+(deny-by-default — nothing is ingestible until approved), and generation
+jobs' RAG mode automatically picks up web-sourced evidence alongside
+uploaded documents, since both land in the same chunk store. Every fetched
+page is sanitized (scripts/styles/nav/footer/comments stripped) and passed
+through a prompt-injection scrub before storage, with a second independent
+defense layer (an explicit "this is data, not instructions" wrapper) now
+applied to every generation prompt.
 
-Two things remain intentionally unreal pending real hardware: **no LLM**
-(generation still defaults to `MockProvider`, per Phase 1/2) and **no
-semantic embedding model** (retrieval defaults to a dependency-free,
-clearly-labeled lexical `HashingEmbeddingProvider`, since this sandbox's
-network policy blocks downloading model weights from huggingface.co, the
-same constraint that blocked Phase 1's LLM benchmarking). Both real
-implementations are written to the same provider interfaces and are a
-config change away once they can be run and benchmarked on the actual
-8GB-VRAM workstation. Also correctly out of scope until later phases:
-Internet retrieval (Phase 4) and independent fact-verification /
-deduplication / quality scoring (Phase 7) — which is why nothing is
-auto-approved yet.
+Three things remain intentionally unreal pending real hardware/network
+access, all for the same reason — this sandbox's network policy blocks
+arbitrary outbound requests (confirmed directly against multiple hosts):
+**no LLM** (generation still defaults to `MockProvider`), **no semantic
+embedding model** (retrieval still defaults to a clearly-labeled lexical
+`HashingEmbeddingProvider`), and **no live web fetch** (the real
+`RequestsFetcher` is implemented and unit-tested via a mocked transport,
+but not exercised against the actual Internet). All three are one config
+change away from their real implementations once run on the target
+workstation with normal network access. Also correctly out of scope until
+later phases: independent fact-verification / deduplication / quality
+scoring (Phase 7) — which is why nothing is auto-approved yet.

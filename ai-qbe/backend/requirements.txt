@@ -19,6 +19,10 @@ pypdf>=4.0
 qdrant-client>=1.9
 numpy>=1.26
 
+# Controlled Internet research (Phase 4)
+beautifulsoup4>=4.12
+lxml>=5.0
+
 # Optional, production-only: the real semantic embedding model
 # (backend/embeddings/sentence_transformers_provider.py). Not required for
 # the dev/test default (HashingEmbeddingProvider). Install separately on
