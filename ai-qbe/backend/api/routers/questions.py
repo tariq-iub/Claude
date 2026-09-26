@@ -226,7 +226,7 @@ def regenerate_question(
         context_window=generation_model.context_window,
     )
 
-    cell = PlanCell(topic.id, candidate.bloom_level.value, candidate.difficulty.value, 1)
+    cell = PlanCell(topic.id, candidate.bloom_level.value, candidate.difficulty.value, 1, candidate.question_type)
     new_candidate, _ = _generate_one(
         db, job, topic, provider, prompt_template, cell,
         vector_store=get_vector_store(), embedding_provider=get_embedding_provider(),

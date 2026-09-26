@@ -6,7 +6,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from backend.domain.enums import BloomLevel, DifficultyLevel, GenerationJobStatus, MCQStatus, ReviewAction
+from backend.domain.enums import (
+    BloomLevel,
+    DifficultyLevel,
+    GenerationJobStatus,
+    MCQStatus,
+    QuestionType,
+    ReviewAction,
+)
 
 # --- Auth -------------------------------------------------------------
 
@@ -61,6 +68,12 @@ class GenerationJobCreate(BaseModel):
         "apply": 0.3,
         "analyze": 0.15,
     }
+    question_type_distribution: dict[str, float] = {
+        "single_best_answer": 0.6,
+        "scenario_based": 0.25,
+        "negative": 0.10,
+        "definition_recall": 0.05,
+    }
     topics: list[GenerationJobTopicIn]
     use_rag: bool = Field(
         False,
@@ -87,7 +100,7 @@ class GenerationJobCreate(BaseModel):
                 )
         return self
 
-    @field_validator("difficulty_distribution", "bloom_distribution")
+    @field_validator("difficulty_distribution", "bloom_distribution", "question_type_distribution")
     @classmethod
     def _fractions_sum_to_one(cls, value: dict[str, float]) -> dict[str, float]:
         total = sum(value.values())
@@ -109,6 +122,14 @@ class GenerationJobCreate(BaseModel):
         valid = {d.value for d in DifficultyLevel}
         if not set(value.keys()).issubset(valid):
             raise ValueError(f"difficulty_distribution keys must be a subset of {valid}")
+        return value
+
+    @field_validator("question_type_distribution")
+    @classmethod
+    def _question_type_keys_valid(cls, value: dict[str, float]) -> dict[str, float]:
+        valid = {q.value for q in QuestionType}
+        if not set(value.keys()).issubset(valid):
+            raise ValueError(f"question_type_distribution keys must be a subset of {valid}")
         return value
 
 
@@ -169,6 +190,7 @@ class MCQCandidateOut(BaseModel):
     explanation: str | None
     bloom_level: BloomLevel
     difficulty: DifficultyLevel
+    question_type: str
     status: MCQStatus
     confidence: float | None
     options: list[MCQOptionOut]

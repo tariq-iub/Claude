@@ -55,5 +55,19 @@ class Settings(BaseSettings):
     # points this at its own self-hosted SearXNG instance.
     searxng_base_url: str | None = None
 
+    # MCQ generation engine (Phase 5). Upper bound on how many questions
+    # one plan cell requests per LLM call -- docs/PHASE0-DESIGN.md
+    # section 11 / master prompt section 9: "batches of 10-30 questions",
+    # never one call per question and never thousands in one request
+    # (master prompt section 52). A cell needing fewer than this simply
+    # requests fewer; this is a ceiling, not a floor.
+    generation_max_batch_size: int = 20
+    # Upper bound on additional over-generation rounds a job will run to
+    # try to close the gap between generated-valid-so-far and
+    # requested_count (docs/PHASE0-DESIGN.md section 30). A job's own
+    # `max_attempts` field (set per job, default 3) is the actual limit
+    # used; this is only a hard ceiling against a misconfigured job.
+    generation_max_rounds_ceiling: int = 10
+
 
 settings = Settings()

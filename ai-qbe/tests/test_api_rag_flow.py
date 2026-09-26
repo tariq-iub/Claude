@@ -107,11 +107,15 @@ def test_upload_source_then_generate_with_rag(client):
 
     resp = client.post(f"/api/generation-jobs/{job_id}/start", headers=_auth(token))
     assert resp.status_code == 200, resp.text
-    assert resp.json()["generated_count"] == 2
+    # requested_count=2 with the job model's default over_generation_factor
+    # (1.4) -> round 0 asks for ceil(2*1.4)=3; MockProvider is 100%
+    # structurally valid so that's also the final count (Phase 5
+    # over-generation, docs/PHASE0-DESIGN.md section 30).
+    assert resp.json()["generated_count"] == 3
 
     resp = client.get(f"/api/questions?generation_job_id={job_id}", headers=_auth(token))
     questions = resp.json()
-    assert len(questions) == 2
+    assert len(questions) == 3
     for q in questions:
         assert len(q["source_chunk_ids"]) >= 1  # grounded in the ingested chunk(s)
 
@@ -153,4 +157,5 @@ def test_rag_job_with_no_ingested_documents_falls_back_gracefully(client):
 
     resp = client.post(f"/api/generation-jobs/{job_id}/start", headers=_auth(token))
     assert resp.status_code == 200
-    assert resp.json()["generated_count"] == 1
+    # requested_count=1 -> ceil(1*1.4)=2 under the default over_generation_factor.
+    assert resp.json()["generated_count"] == 2

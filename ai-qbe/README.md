@@ -32,14 +32,18 @@ academic review.
   the Phase 4 controlled Internet research pipeline: approved-domain
   policy (deny-by-default), sandboxed fetching, HTML sanitization,
   two-layer prompt-injection defense, and web-to-knowledge-pack ingestion.
+- [`docs/PHASE5-GENERATION-ENGINE.md`](docs/PHASE5-GENERATION-ENGINE.md) —
+  the Phase 5 MCQ generation engine: the full topic × difficulty × Bloom ×
+  question-type planner, real LLM-call batching, and the over-generation
+  round loop that chases a job's requested approved-eligible count.
 - [`llm/`](llm) — the model-independent `ILLMProvider` interface (Ollama /
   llama.cpp / OpenAI-compatible / mock backends) and the JSON Schemas
   generation and verification calls must satisfy.
 - [`backend/`](backend) — the FastAPI application: database models &
   migrations, the academic-data adapter, embedding provider abstraction,
-  generation planner/executor (manual-context and RAG modes), structural
-  validation, security (auth/RBAC/audit), REST API routers, and Celery
-  worker tasks.
+  the generation planner/executor (manual-context and RAG modes, batched
+  generation, over-generation rounds), structural validation, security
+  (auth/RBAC/audit), REST API routers, and Celery worker tasks.
 - [`rag/`](rag) — document extraction (PDF/text), semantic chunking, the
   vector-store abstraction (Qdrant), the ingestion pipeline, Topic
   Knowledge Pack retrieval, and (`rag/web/`) approved-domain search,
@@ -47,40 +51,49 @@ academic review.
 - [`scripts/benchmark/`](scripts/benchmark) — the ~100-task benchmark set
   (MCQ generation, answer verification, JSON-compliance stress, SymPy-
   checkable math) plus the runnable harness and report template.
-- [`tests/`](tests) — 128 passing tests covering the benchmark grading
-  logic and fixtures, the planner's apportionment math, structural
-  validation, end-to-end generation-job execution (manual-context and RAG
+- [`tests/`](tests) — 141 passing tests covering the benchmark grading
+  logic and fixtures, the planner's apportionment math (including the
+  full topic × difficulty × Bloom × question-type split), structural
+  validation, batched generation (one-LLM-call-per-batch, multi-batch
+  splitting, item distinctness), over-generation round escalation and
+  exhaustion, end-to-end generation-job execution (manual-context and RAG
   modes), a full API integration flow (auth/RBAC, job lifecycle, review
-  actions, versioning, document upload, RAG-grounded generation with
-  citations), a real Alembic upgrade/downgrade round-trip, real PDF
-  extraction, semantic chunking, real Qdrant vector-store behavior,
-  domain-policy enforcement, HTML sanitization, prompt-injection
-  scrubbing, and a full web-ingestion flow against a simulated malicious
-  page.
+  actions, versioning, regenerate, document upload, RAG-grounded
+  generation with citations), a real Alembic upgrade/downgrade
+  round-trip, real PDF extraction, semantic chunking, real Qdrant
+  vector-store behavior, domain-policy enforcement, HTML sanitization,
+  prompt-injection scrubbing, and a full web-ingestion flow against a
+  simulated malicious page.
 
 ## Status
 
-**Phase 4 — Controlled Internet Research.** Implemented and tested
-(`python3 -m pytest ai-qbe/tests -q` → 128 passed). Documents can now be
-ingested from **approved-domain URLs** as well as direct upload: an
-administrator manages an explicit approved/blocked domain list
-(deny-by-default — nothing is ingestible until approved), and generation
-jobs' RAG mode automatically picks up web-sourced evidence alongside
-uploaded documents, since both land in the same chunk store. Every fetched
-page is sanitized (scripts/styles/nav/footer/comments stripped) and passed
-through a prompt-injection scrub before storage, with a second independent
-defense layer (an explicit "this is data, not instructions" wrapper) now
-applied to every generation prompt.
+**Phase 5 — MCQ Generation Engine.** Implemented and tested
+(`python3 -m pytest ai-qbe/tests -q` → 141 passed). The planner now
+splits a job's requested count across topic × difficulty × Bloom ×
+**question type** (a new format-diversity dimension — scenario-based,
+negative/"NOT" framing, definition-recall, alongside standard
+single-best-answer — orthogonal to Bloom's cognitive-level axis).
+Generation is now **batched**: each plan cell requests up to 20 questions
+per LLM call instead of one call per question, with every item in a batch
+still validated independently. Jobs now actually use their
+`over_generation_factor` and run additional rounds (bounded by
+`max_attempts`) to close the gap between what's reached human review and
+what was requested, recording per-round metrics for auditability. Writing
+a regenerate test with a deliberately non-default question type caught
+and fixed a real bug where regeneration silently reset a question's type
+to the default.
 
 Three things remain intentionally unreal pending real hardware/network
 access, all for the same reason — this sandbox's network policy blocks
 arbitrary outbound requests (confirmed directly against multiple hosts):
-**no LLM** (generation still defaults to `MockProvider`), **no semantic
-embedding model** (retrieval still defaults to a clearly-labeled lexical
-`HashingEmbeddingProvider`), and **no live web fetch** (the real
-`RequestsFetcher` is implemented and unit-tested via a mocked transport,
-but not exercised against the actual Internet). All three are one config
-change away from their real implementations once run on the target
-workstation with normal network access. Also correctly out of scope until
-later phases: independent fact-verification / deduplication / quality
-scoring (Phase 7) — which is why nothing is auto-approved yet.
+**no LLM** (generation still defaults to `MockProvider`, so batch
+compliance and accept-rate numbers describe the mechanism, not a real
+model's behavior), **no semantic embedding model** (retrieval still
+defaults to a clearly-labeled lexical `HashingEmbeddingProvider`), and
+**no live web fetch** (the real `RequestsFetcher` is implemented and
+unit-tested via a mocked transport, but not exercised against the actual
+Internet). All three are one config change away from their real
+implementations once run on the target workstation with normal network
+access. Also correctly out of scope until later phases: independent
+fact-verification / deduplication / quality scoring / concept-coverage
+diversity metrics (Phase 7) — which is why nothing is auto-approved yet.

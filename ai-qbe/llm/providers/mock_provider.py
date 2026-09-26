@@ -88,15 +88,31 @@ class MockProvider(ILLMProvider):
         if set(properties.keys()) == {"answer"}:
             return {"answer": "0"}
 
-        # MCQ generation shape: derive a plausible-looking stem/options from
-        # the prompt's own "Instruction:" / topic text so different tasks
-        # don't all produce byte-identical output (which would trivially
-        # pass dedup checks it shouldn't).
+        if "items" in properties and properties["items"].get("type") == "array":
+            # Phase 5 batch-generation shape: {"items": [<mcq>, ...]}.
+            # Parse "Generate exactly N ..." from the executor's own batch
+            # prompt wording; fall back to the schema's own bound if that
+            # phrasing isn't found (e.g. a hand-written test prompt).
+            count_match = re.search(r"[Gg]enerate exactly (\d+)", prompt)
+            if count_match:
+                n = int(count_match.group(1))
+            else:
+                n = properties["items"].get("maxItems", 1)
+            return {"items": [self._synthesize_mcq(prompt, index=i) for i in range(n)]}
+
+        return self._synthesize_mcq(prompt, index=0)
+
+    def _synthesize_mcq(self, prompt: str, *, index: int) -> dict:
+        # Derive a plausible-looking stem/options from the prompt's own
+        # "Instruction:" / topic text, varied by `index`, so a batch of N
+        # items -- or N separate single-item calls -- don't all produce
+        # byte-identical output (which would trivially pass dedup checks
+        # it shouldn't) and so per-item processing can be tested for real.
         topic_match = re.search(r"Instruction:\s*(.+)", prompt)
         topic_text = topic_match.group(1)[:80] if topic_match else "the supplied context"
         return {
-            "question": f"[MOCK] Which statement best follows from {topic_text}?",
-            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "question": f"[MOCK #{index}] Which statement best follows from {topic_text}?",
+            "options": [f"Option A-{index}", f"Option B-{index}", f"Option C-{index}", f"Option D-{index}"],
             "correct_option": 0,
             "explanation": "MockProvider placeholder explanation -- not a real academic answer.",
             "topic": "mock-topic",

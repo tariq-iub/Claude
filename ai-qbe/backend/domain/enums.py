@@ -65,6 +65,20 @@ class DifficultyLevel(str, enum.Enum):
     HARD = "hard"
 
 
+class QuestionType(str, enum.Enum):
+    """Question-*format* diversity (docs/PHASE0-DESIGN.md section 11 /
+    master prompt section 9's "question type diversity"), deliberately
+    orthogonal to BloomLevel (which is cognitive-operation diversity) --
+    a SCENARIO_BASED question can be at any Bloom level, for instance.
+    Phase 5 scope.
+    """
+
+    SINGLE_BEST_ANSWER = "single_best_answer"  # standard direct-question MCQ
+    SCENARIO_BASED = "scenario_based"  # short word-problem / applied-context framing
+    NEGATIVE = "negative"  # "which of the following is NOT/is an exception"
+    DEFINITION_RECALL = "definition_recall"  # matching a term to its defining property
+
+
 class ReviewAction(str, enum.Enum):
     APPROVE = "approve"
     REJECT = "reject"

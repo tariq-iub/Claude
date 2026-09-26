@@ -78,6 +78,7 @@ def create_job(
         option_count=payload.option_count,
         difficulty_distribution=payload.difficulty_distribution,
         bloom_distribution=payload.bloom_distribution,
+        question_type_distribution=payload.question_type_distribution,
         source_policy={
             "local_docs": payload.use_rag,
             "internet": False,

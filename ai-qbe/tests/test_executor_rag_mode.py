@@ -66,6 +66,11 @@ def _make_job(db_session, model_id, *, use_rag, manual_context=None):
         option_count=4,
         difficulty_distribution={"easy": 1.0},
         bloom_distribution={"remember": 1.0},
+        # over_generation_factor=1.0 (rather than the model default 1.4)
+        # keeps generated_count == requested_count exactly for this
+        # test's assertions; over-generation itself is covered in
+        # tests/test_generation_executor.py.
+        over_generation_factor=1.0,
         source_policy={"local_docs": use_rag, "manual_context": not use_rag},
         model_id=model_id,
         status=GenerationJobStatus.QUEUED,
