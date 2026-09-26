@@ -1,0 +1,22 @@
+[
+  {"id": "json-001", "description": "Baseline: short factual MCQ, minimal fields", "prompt": "Generate one MCQ about the SI unit of mass, with 4 short options."},
+  {"id": "json-002", "description": "LaTeX-heavy stem", "prompt": "Generate one MCQ whose stem contains a LaTeX fraction and an integral, e.g. involving \\int_0^1 x^2\\,dx, with 4 numeric options."},
+  {"id": "json-003", "description": "LaTeX matrix in options", "prompt": "Generate one MCQ where each of the 4 options is a 2x2 matrix written in LaTeX bmatrix notation."},
+  {"id": "json-004", "description": "Chemistry notation with subscripts/superscripts", "prompt": "Generate one MCQ about balancing a combustion reaction, using \\ce{} chemistry notation in the stem and options."},
+  {"id": "json-005", "description": "Five-option variant", "prompt": "Generate one MCQ with exactly 5 options (A-E) about periodic trends."},
+  {"id": "json-006", "description": "Long explanation field", "prompt": "Generate one MCQ about Newton's second law where the explanation field walks through the calculation in 3 sentences."},
+  {"id": "json-007", "description": "Greek symbols", "prompt": "Generate one MCQ about angular velocity that uses the Greek letters omega and theta in LaTeX in both the stem and options."},
+  {"id": "json-008", "description": "Negative numbers and units together", "prompt": "Generate one MCQ about temperature conversion where at least one option is a negative number with a unit (e.g. -15 \\,^{\\circ}C)."},
+  {"id": "json-009", "description": "Nested fraction and exponent", "prompt": "Generate one MCQ whose correct option is a nested LaTeX expression such as \\frac{x^2+1}{2x}."},
+  {"id": "json-010", "description": "Scientific notation", "prompt": "Generate one MCQ about Avogadro's number requiring an option written in scientific notation, e.g. 6.022 \\times 10^{23}."},
+  {"id": "json-011", "description": "Multiple sentences in stem", "prompt": "Generate one MCQ whose stem is a 3-sentence word problem about projectile motion."},
+  {"id": "json-012", "description": "Empty/near-empty context edge case", "prompt": "Given only the topic name 'Vectors' and no further context, either generate a strictly schema-valid MCQ grounded in general vector knowledge or return an empty options array signaling insufficient evidence -- follow the schema exactly either way."},
+  {"id": "json-013", "description": "Special characters requiring JSON escaping", "prompt": "Generate one MCQ where the stem contains a double-quote character used for units (e.g. 12\" ruler) to test correct JSON string escaping."},
+  {"id": "json-014", "description": "Unicode subscripts in chemistry", "prompt": "Generate one MCQ using unicode subscript characters for a chemical formula (e.g. H₂O) instead of LaTeX, to test tolerance of mixed notation."},
+  {"id": "json-015", "description": "Bloom level = analyze, multi-step reasoning", "prompt": "Generate one MCQ classified as Bloom level 'analyze' requiring two sequential calculation steps (work-energy then kinematics) to reach the answer."},
+  {"id": "json-016", "description": "Duplicate-option trap", "prompt": "Generate one MCQ about SI units, then re-check your own output before responding: if any two options are worded identically, replace one before returning the JSON."},
+  {"id": "json-017", "description": "Long option text near the 6-word limit", "prompt": "Generate one MCQ about equilibrium shift direction where each option is a short phrase of at most 6 words describing a shift, not a single word."},
+  {"id": "json-018", "description": "Confidence calibration", "prompt": "Generate one MCQ about a topic with only partial supporting context (give the model 1 sentence of context about photosynthesis) and require an honest, calibrated confidence score reflecting the limited evidence."},
+  {"id": "json-019", "description": "Vector notation with arrows", "prompt": "Generate one MCQ where vectors are denoted with LaTeX arrow notation, e.g. \\vec{A} + \\vec{B}, in both stem and options."},
+  {"id": "json-020", "description": "Strict additionalProperties=false stress test", "prompt": "Generate one MCQ and do not include any fields beyond those in the schema (no 'rationale', no 'notes', no extra metadata keys)."}
+]
