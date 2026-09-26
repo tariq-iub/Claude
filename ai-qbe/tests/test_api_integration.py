@@ -104,7 +104,12 @@ def test_full_generation_and_review_flow(client):
     assert resp.status_code == 200, resp.text
     started_job = resp.json()
     assert started_job["status"] == "COMPLETED"
-    assert started_job["generated_count"] == 4
+    # requested_count=4 with the job model default over_generation_factor
+    # (1.4, not exposed on GenerationJobCreate yet) -> round 0 already
+    # asks for ceil(4*1.4)=6 and, since MockProvider is 100% structurally
+    # valid, that is also the final count (see docs/PHASE0-DESIGN.md
+    # section 30 on over-generation).
+    assert started_job["generated_count"] == 6
 
     # Starting an already-started (now completed) job is rejected, not silently re-run
     resp = client.post(f"/api/generation-jobs/{job_id}/start", headers=_auth_headers(admin_token))
@@ -114,14 +119,14 @@ def test_full_generation_and_review_flow(client):
     resp = client.get(f"/api/generation-jobs/{job_id}/progress", headers=_auth_headers(viewer_token))
     assert resp.status_code == 200
     progress = resp.json()
-    assert progress["generated_count"] == 4
-    assert progress["pending_review_count"] == 4  # MockProvider always produces structurally valid output
+    assert progress["generated_count"] == 6
+    assert progress["pending_review_count"] == 6  # MockProvider always produces structurally valid output
 
     # List the generated questions
     resp = client.get(f"/api/questions?generation_job_id={job_id}", headers=_auth_headers(viewer_token))
     assert resp.status_code == 200
     questions = resp.json()
-    assert len(questions) == 4
+    assert len(questions) == 6
     for q in questions:
         assert q["status"] == "PENDING_REVIEW"
         assert len(q["options"]) == 4

@@ -28,49 +28,95 @@ academic review.
   pipeline: embedding provider abstraction, Qdrant vector store, PDF/text
   ingestion, semantic chunking, topic-scoped retrieval, Topic Knowledge
   Packs, and citation-tracked generation.
+- [`docs/PHASE4-INTERNET-RESEARCH.md`](docs/PHASE4-INTERNET-RESEARCH.md) —
+  the Phase 4 controlled Internet research pipeline: approved-domain
+  policy (deny-by-default), sandboxed fetching, HTML sanitization,
+  two-layer prompt-injection defense, and web-to-knowledge-pack ingestion.
+- [`docs/PHASE5-GENERATION-ENGINE.md`](docs/PHASE5-GENERATION-ENGINE.md) —
+  the Phase 5 MCQ generation engine: the full topic × difficulty × Bloom ×
+  question-type planner, real LLM-call batching, and the over-generation
+  round loop that chases a job's requested approved-eligible count.
+- [`docs/PHASE6-SCIENTIFIC-CONTENT.md`](docs/PHASE6-SCIENTIFIC-CONTENT.md) —
+  the Phase 6 scientific notation pipeline: real MathJax-backed LaTeX
+  validation (via a Node subprocess), chemistry formula/equation-balance
+  checking, physics unit-presence flags, and the generation-time
+  notation gate that blocks malformed candidates before human review.
+- [`docs/PHASE7-QA-PIPELINE.md`](docs/PHASE7-QA-PIPELINE.md) — the Phase 7
+  quality assurance pipeline: SymPy/LLM independent answer verification,
+  distractor quality checks, 4-level semantic deduplication (including a
+  gated LLM-judge tie-break), difficulty/Bloom cross-checking, and a
+  composite quality score derived only from validator outputs.
 - [`llm/`](llm) — the model-independent `ILLMProvider` interface (Ollama /
   llama.cpp / OpenAI-compatible / mock backends) and the JSON Schemas
   generation and verification calls must satisfy.
 - [`backend/`](backend) — the FastAPI application: database models &
   migrations, the academic-data adapter, embedding provider abstraction,
-  generation planner/executor (manual-context and RAG modes), structural
-  validation, security (auth/RBAC/audit), REST API routers, and Celery
-  worker tasks.
+  the generation planner/executor (manual-context and RAG modes, batched
+  generation, over-generation rounds, the full Phase 7 QA pipeline),
+  structural/notation/answer/distractor/dedup validation, security
+  (auth/RBAC/audit), REST API routers, and Celery worker tasks.
 - [`rag/`](rag) — document extraction (PDF/text), semantic chunking, the
-  vector-store abstraction (Qdrant), the ingestion pipeline, and Topic
-  Knowledge Pack retrieval.
+  vector-store abstraction (Qdrant), the ingestion pipeline, Topic
+  Knowledge Pack retrieval, and (`rag/web/`) approved-domain search,
+  fetching, sanitization, and prompt-injection defense.
+- [`tools/mathjax_validator/`](tools/mathjax_validator) — a Node.js
+  subprocess (real MathJax, via `mathjax-full`) that renders LaTeX/mhchem
+  snippets to detect malformed notation; see `npm install` instructions
+  there before running notation-related tests.
 - [`scripts/benchmark/`](scripts/benchmark) — the ~100-task benchmark set
   (MCQ generation, answer verification, JSON-compliance stress, SymPy-
   checkable math) plus the runnable harness and report template.
-- [`tests/`](tests) — 91 passing tests covering the benchmark grading
-  logic and fixtures, the planner's apportionment math, structural
-  validation, end-to-end generation-job execution (manual-context and RAG
-  modes), a full API integration flow (auth/RBAC, job lifecycle, review
-  actions, versioning, document upload, RAG-grounded generation with
-  citations), a real Alembic upgrade/downgrade round-trip, real PDF
-  extraction, semantic chunking, and real Qdrant vector-store behavior.
+- [`tests/`](tests) — 274 passing tests covering the benchmark grading
+  logic and fixtures, the planner's apportionment math (including the
+  full topic × difficulty × Bloom × question-type split), structural,
+  scientific-notation, and full QA-pipeline validation, batched
+  generation (one-LLM-call-per-batch, multi-batch splitting, item
+  distinctness), over-generation round escalation and exhaustion,
+  end-to-end generation-job execution (manual-context and RAG modes,
+  independent answer verification, cross-job deduplication), a full API
+  integration flow (auth/RBAC, job lifecycle, review actions, versioning,
+  regenerate, document upload, RAG-grounded generation with citations,
+  quality scores and QA results exposed through the review endpoints), a
+  real Alembic upgrade/downgrade round-trip, real PDF extraction,
+  semantic chunking, real Qdrant vector-store behavior, domain-policy
+  enforcement, HTML sanitization, prompt-injection scrubbing, a full
+  web-ingestion flow against a simulated malicious page, and a seeded
+  valid/malformed notation set run against real MathJax with zero false
+  positives/negatives.
 
 ## Status
 
-**Phase 3 — Document RAG.** Implemented and tested
-(`python3 -m pytest ai-qbe/tests -q` → 91 passed). Documents (PDF/text/
-Markdown) can be uploaded, cleaned, chunked, embedded, and stored in
-Qdrant with full metadata; generation jobs can now run in **RAG mode**
-(`use_rag: true`), retrieving a Topic Knowledge Pack from ingested
-documents instead of requiring manually-supplied context, with every
-resulting candidate recording exactly which source chunks it was grounded
-in (`MCQSource`, surfaced as `source_chunk_ids` on the question API).
-Manual-context mode (Phase 2) still works unchanged.
+**Phase 7 — Quality Assurance Pipeline.** Implemented and tested
+(`python3 -m pytest ai-qbe/tests -q` → 274 passed). This is the phase the
+master prompt marks mandatory before production use. Every generated
+candidate now runs through independent answer verification (SymPy for
+clean computable questions, an LLM verifier pass otherwise — never the
+generator's own claimed answer taken on faith), distractor quality checks
+(near-duplicate options, a "possible second correct answer" flag, length
+outliers), 4-level semantic deduplication (exact hash → lexical →
+embedding → a genuinely-gated LLM-judge tie-break for the borderline
+band, compared against every still-alive candidate ever generated for the
+same subject/topic across all jobs — not just the current one), a
+difficulty/Bloom cross-check, and a composite quality score derived
+solely from those validators' outputs (verified by an AST-inspection
+test, not just asserted in a docstring). A candidate can now land at
+`PENDING_REVIEW`, `REJECTED`, `DUPLICATE`, or `LOW_CONFIDENCE` — only the
+first counts toward a job's requested target, so Phase 5's over-generation
+loop now compensates for real rejection reasons, not just structural
+ones. Building this surfaced and fixed a real bug: `MockProvider`'s
+templated output was ~99% lexically similar between consecutive items,
+so the new dedup logic correctly flagged nearly everything it generated
+as duplicates of itself — fixed by giving the mock 40 wholesale-distinct
+question stems instead of one template with a trailing counter.
 
-Two things remain intentionally unreal pending real hardware: **no LLM**
-(generation still defaults to `MockProvider`, per Phase 1/2) and **no
-semantic embedding model** (retrieval defaults to a dependency-free,
-clearly-labeled lexical `HashingEmbeddingProvider`, since this sandbox's
-network policy blocks downloading model weights from huggingface.co, the
-same constraint that blocked Phase 1's LLM benchmarking). Both real
-implementations are written to the same provider interfaces and are a
-config change away once they can be run and benchmarked on the actual
-8GB-VRAM workstation. Also correctly out of scope until later phases:
-Internet retrieval (Phase 4) and independent fact-verification /
-deduplication / quality scoring (Phase 7) — which is why nothing is
-auto-approved yet.
+Still unreal for the same standing reasons as every earlier phase
+touching inference: no real LLM (verification and the dedup judge both
+run against `MockProvider`) and no real semantic embedding model
+(distractor/dedup embedding checks are bounded by the lexical
+`HashingEmbeddingProvider` from Phase 3 — a paraphrase-level duplicate
+like "What is the SI unit of force?" vs. "Force is measured in which SI
+unit?" won't be caught until a real semantic model is wired in). Also
+correctly out of scope until later phases: concept-coverage diversity
+metrics across an entire approved bank (Phase 9) and the human review UI
+itself (Phase 8) — which is why nothing is auto-approved yet, even though
+everything needed to inform that decision is now computed and stored.

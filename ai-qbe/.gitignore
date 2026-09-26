@@ -5,3 +5,4 @@ results/
 *.db
 .env
 backend/alembic.ini.bak
+node_modules/

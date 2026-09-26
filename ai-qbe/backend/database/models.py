@@ -120,6 +120,12 @@ class GenerationJob(Base):
     option_count: Mapped[int] = mapped_column(default=4)
     difficulty_distribution: Mapped[dict] = mapped_column(JSONVariant)
     bloom_distribution: Mapped[dict] = mapped_column(JSONVariant)
+    # Phase 5: question-*format* diversity (docs/PHASE0-DESIGN.md section 11),
+    # orthogonal to bloom_distribution. Defaults to 100% single_best_answer,
+    # which reproduces pre-Phase-5 behavior exactly for existing jobs.
+    question_type_distribution: Mapped[dict] = mapped_column(
+        JSONVariant, default=lambda: {"single_best_answer": 1.0}
+    )
     source_policy: Mapped[dict] = mapped_column(JSONVariant)
     internet_enabled: Mapped[bool] = mapped_column(default=False)
     model_id: Mapped[int] = mapped_column(ForeignKey("generation_models.id"))

@@ -53,3 +53,40 @@ def test_build_plan_skips_zero_target_topics():
     topic_targets = {1: 0, 2: 5}
     plan = build_plan(topic_targets, {"easy": 1.0}, {"remember": 1.0})
     assert all(cell.generation_job_topic_id != 1 for cell in plan)
+
+
+def test_build_plan_defaults_question_type_to_single_best_answer():
+    plan = build_plan({1: 5}, {"easy": 1.0}, {"remember": 1.0})
+    assert all(cell.question_type == "single_best_answer" for cell in plan)
+
+
+def test_build_plan_distributes_question_types():
+    topic_targets = {1: 100}
+    difficulty_distribution = {"easy": 1.0}
+    bloom_distribution = {"remember": 1.0}
+    question_type_distribution = {
+        "single_best_answer": 0.6,
+        "scenario_based": 0.25,
+        "negative": 0.10,
+        "definition_recall": 0.05,
+    }
+
+    plan = build_plan(topic_targets, difficulty_distribution, bloom_distribution, question_type_distribution)
+
+    totals_by_type = {}
+    for cell in plan:
+        totals_by_type[cell.question_type] = totals_by_type.get(cell.question_type, 0) + cell.count
+    assert sum(totals_by_type.values()) == 100
+    assert set(totals_by_type.keys()).issubset(set(question_type_distribution.keys()))
+    # single_best_answer should dominate given its 0.6 share
+    assert totals_by_type.get("single_best_answer", 0) > totals_by_type.get("negative", 0)
+
+
+def test_build_plan_full_three_way_split_sums_to_topic_target():
+    topic_targets = {1: 47}  # deliberately awkward number to stress largest-remainder math
+    difficulty_distribution = {"easy": 0.3, "medium": 0.5, "hard": 0.2}
+    bloom_distribution = {"remember": 0.25, "understand": 0.3, "apply": 0.3, "analyze": 0.15}
+    question_type_distribution = {"single_best_answer": 0.6, "scenario_based": 0.4}
+
+    plan = build_plan(topic_targets, difficulty_distribution, bloom_distribution, question_type_distribution)
+    assert sum(cell.count for cell in plan) == 47
