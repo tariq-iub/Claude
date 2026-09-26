@@ -44,7 +44,11 @@ def run_generation_job_task(job_id: int) -> None:
             db.query(PromptTemplate).filter_by(prompt_key="mcq_generation", version=1).one()
         )
 
-        run_generation_job(db, job, provider, prompt_template)
+        run_generation_job(
+            db, job, provider, prompt_template,
+            vector_store=deps.get_vector_store(),
+            embedding_provider=deps.get_embedding_provider(),
+        )
         db.commit()
     except Exception:
         db.rollback()

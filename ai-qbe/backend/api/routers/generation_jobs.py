@@ -78,7 +78,11 @@ def create_job(
         option_count=payload.option_count,
         difficulty_distribution=payload.difficulty_distribution,
         bloom_distribution=payload.bloom_distribution,
-        source_policy={"local_docs": False, "internet": False, "manual_context": True},
+        source_policy={
+            "local_docs": payload.use_rag,
+            "internet": False,
+            "manual_context": not payload.use_rag,
+        },
         internet_enabled=False,
         model_id=model.id,
         status=GenerationJobStatus.QUEUED,

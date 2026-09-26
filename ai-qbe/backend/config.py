@@ -32,5 +32,16 @@ class Settings(BaseSettings):
     default_llm_base_url: str = "http://localhost:11434"
     default_llm_model_name: str = "mock-model"
 
+    # RAG (Phase 3). 'hashing' is a dependency-free, non-semantic dev/test
+    # default -- see backend/embeddings/hashing_provider.py for why.
+    # Production sets this to 'sentence_transformers' once Phase 1's model
+    # benchmark also validates an embedding model choice on real hardware.
+    embedding_provider_type: str = "hashing"
+    embedding_model_name: str = "BAAI/bge-small-en-v1.5"
+    # ':memory:' runs an embedded Qdrant instance with no server (dev/test
+    # default); production points this at a real Qdrant deployment, e.g.
+    # 'http://localhost:6333'.
+    vector_store_location: str = ":memory:"
+
 
 settings = Settings()

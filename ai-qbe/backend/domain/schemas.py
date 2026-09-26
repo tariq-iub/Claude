@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.domain.enums import BloomLevel, DifficultyLevel, GenerationJobStatus, MCQStatus, ReviewAction
 
@@ -39,8 +39,13 @@ class TopicOut(BaseModel):
 
 class GenerationJobTopicIn(BaseModel):
     external_topic_id: str
-    manual_context: str = Field(
-        ..., min_length=1, description="Manually-supplied source context for Phase 2 (no RAG yet)."
+    manual_context: str | None = Field(
+        None,
+        description=(
+            "Manually-supplied source context (Phase 2 mode). Required if the "
+            "job's use_rag is false; optional (and merged in as extra context) "
+            "if use_rag is true."
+        ),
     )
     weight: float = 1.0
 
@@ -57,11 +62,30 @@ class GenerationJobCreate(BaseModel):
         "analyze": 0.15,
     }
     topics: list[GenerationJobTopicIn]
+    use_rag: bool = Field(
+        False,
+        description=(
+            "If true, context is retrieved from ingested documents (Phase 3 "
+            "RAG) via the Topic Knowledge Pack, falling back to a topic's "
+            "manual_context only if retrieval finds no evidence. If false "
+            "(default), every topic must supply manual_context (Phase 2 mode)."
+        ),
+    )
     model_provider_type: str = "mock"
     model_name: str = "mock-model"
     model_version: str = "unknown"
     model_quantization: str | None = None
     model_context_window: int = 4096
+
+    @model_validator(mode="after")
+    def _manual_context_required_unless_rag(self) -> "GenerationJobCreate":
+        if not self.use_rag:
+            missing = [t.external_topic_id for t in self.topics if not t.manual_context]
+            if missing:
+                raise ValueError(
+                    f"manual_context is required for topics {missing} when use_rag is false"
+                )
+        return self
 
     @field_validator("difficulty_distribution", "bloom_distribution")
     @classmethod
@@ -149,6 +173,7 @@ class MCQCandidateOut(BaseModel):
     confidence: float | None
     options: list[MCQOptionOut]
     validation_results: list[MCQValidationResultOut] = []
+    source_chunk_ids: list[int] = []
 
     model_config = {"from_attributes": True}
 

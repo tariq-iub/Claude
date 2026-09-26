@@ -266,6 +266,15 @@ class MCQCandidate(Base):
         back_populates="candidate", cascade="all, delete-orphan"
     )
 
+    @property
+    def source_chunk_ids(self) -> list[int]:
+        """Document chunk ids this candidate was grounded in (RAG mode
+        only; empty for manual-context candidates) -- exposed to the API
+        schema for the review UI's evidence panel (Phase 8) and for
+        citation auditing.
+        """
+        return [s.document_chunk_id for s in self.sources]
+
     __table_args__ = (Index("ix_mcq_candidates_job_status", "generation_job_id", "status"),)
 
 

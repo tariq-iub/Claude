@@ -1,16 +1,28 @@
-"""Generation job executor -- Phase 2 scope.
+"""Generation job executor.
 
-Runs a GenerationJob's plan against a configured ILLMProvider using
-manually-supplied per-topic context (no RAG yet -- that's Phase 3). Each
-plan cell requests one MCQ at a time (Phase 5 introduces real batching of
-10-30 questions per call, per docs/PHASE0-DESIGN.md section 11); structural
-validation runs immediately on every response, generation and validation
-still deliberately kept as separate function calls/stages even though
-Phase 2 doesn't yet have a queue between them.
+Runs a GenerationJob's plan against a configured ILLMProvider. Context for
+each topic comes from one of two sources, selected by
+`job.source_policy["local_docs"]`:
+
+  - Phase 2 mode (manually-supplied context): `GenerationJobTopic.manual_context`
+    is used verbatim.
+  - Phase 3 mode (RAG): a Topic Knowledge Pack is built by retrieving the
+    topic's ingested document chunks from the vector store, and the
+    resulting citation-tagged text is used instead -- falling back to
+    `manual_context` if retrieval finds no evidence at all, so a topic
+    with RAG enabled but no ingested documents yet doesn't silently
+    generate from nothing.
+
+Each plan cell requests one MCQ at a time (Phase 5 introduces real
+batching of 10-30 questions per call, per docs/PHASE0-DESIGN.md section
+11); structural validation runs immediately on every response, generation
+and validation still deliberately kept as separate function calls/stages
+even though there's no queue between them yet.
 
 Every candidate — valid or not — is persisted with full provenance
-(job, topic, prompt template, model, model version) before any status
-decision is made, per the "never lose provenance" rule.
+(job, topic, prompt template, model, model version, and — in RAG mode —
+the exact source chunks it was grounded in, via MCQSource) before any
+status decision is made, per the "never lose provenance" rule.
 """
 
 from __future__ import annotations
@@ -27,13 +39,17 @@ from backend.database.models import (
     GenerationModel,
     MCQCandidate,
     MCQOption,
+    MCQSource,
     MCQValidationResult,
     PromptTemplate,
 )
 from backend.domain.enums import BloomLevel, DifficultyLevel, GenerationJobStatus, MCQStatus
+from backend.embeddings.base import IEmbeddingProvider
 from backend.generation.planner import allocate_topic_counts, build_plan
 from backend.validation.structural import validate_mcq_structure
 from llm.providers.base import ILLMProvider
+from rag.knowledge_pack import build_topic_knowledge_pack
+from rag.vectorstore import IVectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +62,18 @@ def run_generation_job(
     job: GenerationJob,
     provider: ILLMProvider,
     prompt_template: PromptTemplate,
+    *,
+    vector_store: IVectorStore | None = None,
+    embedding_provider: IEmbeddingProvider | None = None,
 ) -> GenerationJob:
-    """Synchronously executes `job` end to end (Phase 2 has no queue/worker
-    boundary between "start" and "run" -- see backend/workers/tasks.py for
-    where this gets wrapped for async execution).
+    """Synchronously executes `job` end to end (there is no queue/worker
+    boundary between "start" and "run" independent of this function --
+    see backend/workers/tasks.py for where this gets wrapped for async
+    execution).
+
+    `vector_store`/`embedding_provider` are required only when
+    `job.source_policy["local_docs"]` is true (RAG mode); Phase-2-style
+    manual-context jobs never touch them.
     """
     job.status = GenerationJobStatus.RUNNING
     db.flush()
@@ -68,7 +92,10 @@ def run_generation_job(
     for cell in plan:
         topic = topics_by_id[cell.generation_job_topic_id]
         for _ in range(cell.count):
-            candidate, is_valid = _generate_one(db, job, topic, provider, prompt_template, cell)
+            candidate, is_valid = _generate_one(
+                db, job, topic, provider, prompt_template, cell,
+                vector_store=vector_store, embedding_provider=embedding_provider,
+            )
             generated += 1
             if is_valid:
                 approved_eligible += 1
@@ -90,6 +117,36 @@ def run_generation_job(
     return job
 
 
+def resolve_topic_context(
+    job: GenerationJob,
+    topic: GenerationJobTopic,
+    *,
+    vector_store: IVectorStore | None,
+    embedding_provider: IEmbeddingProvider | None,
+) -> tuple[str, list[int]]:
+    """Returns (context_text, source_chunk_ids). source_chunk_ids is empty
+    for manual-context jobs (Phase 2) and for RAG jobs whose fallback to
+    manual_context was used because retrieval found no evidence.
+    """
+    use_rag = bool(job.source_policy.get("local_docs"))
+    if use_rag and vector_store is not None and embedding_provider is not None:
+        pack = build_topic_knowledge_pack(
+            vector_store,
+            embedding_provider,
+            external_subject_id=job.external_subject_id,
+            external_topic_id=topic.external_topic_id,
+            topic_label=topic.topic_label_snapshot,
+        )
+        if pack.has_evidence:
+            context = pack.as_context_text()
+            if topic.manual_context:
+                context = f"{context}\n\n{topic.manual_context}"
+            return context, pack.source_chunk_ids
+
+    # Manual-context mode, or RAG mode with no ingested evidence yet.
+    return topic.manual_context or "", []
+
+
 def _generate_one(
     db: Session,
     job: GenerationJob,
@@ -97,8 +154,13 @@ def _generate_one(
     provider: ILLMProvider,
     prompt_template: PromptTemplate,
     cell,
+    *,
+    vector_store: IVectorStore | None = None,
+    embedding_provider: IEmbeddingProvider | None = None,
 ) -> tuple[MCQCandidate, bool]:
-    context = topic.manual_context or ""
+    context, source_chunk_ids = resolve_topic_context(
+        job, topic, vector_store=vector_store, embedding_provider=embedding_provider
+    )
     prompt = (
         f"Context:\n{context}\n\n"
         f"Instruction:\nGenerate ONE multiple-choice question about "
@@ -178,10 +240,13 @@ def _generate_one(
             )
         )
 
-    # Phase 2 stops here: STRUCTURE_VALIDATED -> straight to PENDING_REVIEW,
+    for chunk_id in source_chunk_ids:
+        db.add(MCQSource(mcq_candidate_id=candidate.id, document_chunk_id=chunk_id))
+
+    # Structural validation only so far -> straight to PENDING_REVIEW,
     # skipping FACT_VALIDATED / DEDUPLICATED / QUALITY_CHECKED, which don't
     # exist until Phase 7. This is intentional and documented, not a bug --
-    # every Phase-2-generated question needs human review before approval
+    # every question generated so far needs human review before approval
     # precisely because independent fact verification isn't wired up yet.
     candidate.status = MCQStatus.PENDING_REVIEW
     db.flush()

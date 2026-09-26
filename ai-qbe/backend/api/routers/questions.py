@@ -195,6 +195,7 @@ def regenerate_question(
     """Marks the current candidate as superseded and generates a fresh one
     for the same job topic / Bloom level / difficulty / context.
     """
+    from backend.api.deps import get_embedding_provider, get_vector_store
     from backend.database.models import GenerationModel, PromptTemplate
     from backend.generation.executor import _generate_one  # local import avoids a circular import at module load
     from backend.generation.planner import PlanCell
@@ -226,7 +227,10 @@ def regenerate_question(
     )
 
     cell = PlanCell(topic.id, candidate.bloom_level.value, candidate.difficulty.value, 1)
-    new_candidate, _ = _generate_one(db, job, topic, provider, prompt_template, cell)
+    new_candidate, _ = _generate_one(
+        db, job, topic, provider, prompt_template, cell,
+        vector_store=get_vector_store(), embedding_provider=get_embedding_provider(),
+    )
     db.flush()
     db.refresh(new_candidate)
     return new_candidate
