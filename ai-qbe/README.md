@@ -36,6 +36,11 @@ academic review.
   the Phase 5 MCQ generation engine: the full topic × difficulty × Bloom ×
   question-type planner, real LLM-call batching, and the over-generation
   round loop that chases a job's requested approved-eligible count.
+- [`docs/PHASE6-SCIENTIFIC-CONTENT.md`](docs/PHASE6-SCIENTIFIC-CONTENT.md) —
+  the Phase 6 scientific notation pipeline: real MathJax-backed LaTeX
+  validation (via a Node subprocess), chemistry formula/equation-balance
+  checking, physics unit-presence flags, and the generation-time
+  notation gate that blocks malformed candidates before human review.
 - [`llm/`](llm) — the model-independent `ILLMProvider` interface (Ollama /
   llama.cpp / OpenAI-compatible / mock backends) and the JSON Schemas
   generation and verification calls must satisfy.
@@ -48,52 +53,50 @@ academic review.
   vector-store abstraction (Qdrant), the ingestion pipeline, Topic
   Knowledge Pack retrieval, and (`rag/web/`) approved-domain search,
   fetching, sanitization, and prompt-injection defense.
+- [`tools/mathjax_validator/`](tools/mathjax_validator) — a Node.js
+  subprocess (real MathJax, via `mathjax-full`) that renders LaTeX/mhchem
+  snippets to detect malformed notation; see `npm install` instructions
+  there before running notation-related tests.
 - [`scripts/benchmark/`](scripts/benchmark) — the ~100-task benchmark set
   (MCQ generation, answer verification, JSON-compliance stress, SymPy-
   checkable math) plus the runnable harness and report template.
-- [`tests/`](tests) — 141 passing tests covering the benchmark grading
+- [`tests/`](tests) — 215 passing tests covering the benchmark grading
   logic and fixtures, the planner's apportionment math (including the
-  full topic × difficulty × Bloom × question-type split), structural
-  validation, batched generation (one-LLM-call-per-batch, multi-batch
-  splitting, item distinctness), over-generation round escalation and
-  exhaustion, end-to-end generation-job execution (manual-context and RAG
-  modes), a full API integration flow (auth/RBAC, job lifecycle, review
-  actions, versioning, regenerate, document upload, RAG-grounded
-  generation with citations), a real Alembic upgrade/downgrade
-  round-trip, real PDF extraction, semantic chunking, real Qdrant
-  vector-store behavior, domain-policy enforcement, HTML sanitization,
-  prompt-injection scrubbing, and a full web-ingestion flow against a
-  simulated malicious page.
+  full topic × difficulty × Bloom × question-type split), structural and
+  scientific-notation validation, batched generation (one-LLM-call-per-
+  batch, multi-batch splitting, item distinctness), over-generation round
+  escalation and exhaustion, end-to-end generation-job execution
+  (manual-context and RAG modes), a full API integration flow (auth/RBAC,
+  job lifecycle, review actions, versioning, regenerate, document upload,
+  RAG-grounded generation with citations), a real Alembic upgrade/
+  downgrade round-trip, real PDF extraction, semantic chunking, real
+  Qdrant vector-store behavior, domain-policy enforcement, HTML
+  sanitization, prompt-injection scrubbing, a full web-ingestion flow
+  against a simulated malicious page, and a seeded valid/malformed
+  notation set run against real MathJax with zero false positives/negatives.
 
 ## Status
 
-**Phase 5 — MCQ Generation Engine.** Implemented and tested
-(`python3 -m pytest ai-qbe/tests -q` → 141 passed). The planner now
-splits a job's requested count across topic × difficulty × Bloom ×
-**question type** (a new format-diversity dimension — scenario-based,
-negative/"NOT" framing, definition-recall, alongside standard
-single-best-answer — orthogonal to Bloom's cognitive-level axis).
-Generation is now **batched**: each plan cell requests up to 20 questions
-per LLM call instead of one call per question, with every item in a batch
-still validated independently. Jobs now actually use their
-`over_generation_factor` and run additional rounds (bounded by
-`max_attempts`) to close the gap between what's reached human review and
-what was requested, recording per-round metrics for auditability. Writing
-a regenerate test with a deliberately non-default question type caught
-and fixed a real bug where regeneration silently reset a question's type
-to the default.
+**Phase 6 — Scientific Content Support.** Implemented and tested
+(`python3 -m pytest ai-qbe/tests -q` → 215 passed). Generated MCQs
+containing math, physics, or chemistry notation are now checked against
+**real MathJax** (a Node subprocess running `mathjax-full` — the same
+library that will render questions in the eventual review UI, not an
+approximation) plus independent chemistry-content checks (element-symbol
+validity, reaction-equation atom-balance — catching things like an
+unbalanced `H2 + O2 -> H2O` that valid-but-wrong LaTeX would sail through)
+and a soft physics-unit-presence check. A candidate with malformed
+notation is now blocked from reaching human review at generation time,
+with the specific reason recorded for audit.
 
-Three things remain intentionally unreal pending real hardware/network
-access, all for the same reason — this sandbox's network policy blocks
-arbitrary outbound requests (confirmed directly against multiple hosts):
-**no LLM** (generation still defaults to `MockProvider`, so batch
-compliance and accept-rate numbers describe the mechanism, not a real
-model's behavior), **no semantic embedding model** (retrieval still
-defaults to a clearly-labeled lexical `HashingEmbeddingProvider`), and
-**no live web fetch** (the real `RequestsFetcher` is implemented and
-unit-tested via a mocked transport, but not exercised against the actual
-Internet). All three are one config change away from their real
-implementations once run on the target workstation with normal network
-access. Also correctly out of scope until later phases: independent
-fact-verification / deduplication / quality scoring / concept-coverage
-diversity metrics (Phase 7) — which is why nothing is auto-approved yet.
+This is the first phase where "renders correctly" is verified against the
+real target technology rather than deferred pending hardware/network
+access — Node and MathJax need no external network access to check
+notation once installed, unlike an LLM, an embedding model, or a live web
+fetch. Those three remain unreal for the reasons stated in earlier
+phases' notes: this sandbox's network policy blocks arbitrary outbound
+requests, confirmed directly against multiple hosts (huggingface.co,
+ollama.com, example.com). Also correctly out of scope until later phases:
+independent fact-verification / deduplication / quality scoring /
+concept-coverage diversity metrics (Phase 7) — which is why nothing is
+auto-approved yet.

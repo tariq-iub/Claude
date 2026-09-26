@@ -50,6 +50,7 @@ from backend.database.models import (
 from backend.domain.enums import BloomLevel, DifficultyLevel, GenerationJobStatus, MCQStatus
 from backend.embeddings.base import IEmbeddingProvider
 from backend.generation.planner import PlanCell, allocate_topic_counts, build_plan
+from backend.validation.notation import validate_notation
 from backend.validation.structural import validate_mcq_structure
 from llm.providers.base import ILLMProvider
 from rag.knowledge_pack import build_topic_knowledge_pack
@@ -378,6 +379,21 @@ def _apply_parsed_item(db: Session, candidate: MCQCandidate, raw_item, source_ch
     )
 
     if not validation.passed:
+        candidate.status = MCQStatus.INVALID
+        db.flush()
+        return False
+
+    notation = validate_notation(raw_item)
+    db.add(
+        MCQValidationResult(
+            mcq_candidate_id=candidate.id,
+            validator_name="notation",
+            stage="notation",
+            result=notation.status_label,
+            details={"reasons": notation.reasons, "unit_warnings": notation.unit_warnings, **notation.details},
+        )
+    )
+    if not notation.passed:
         candidate.status = MCQStatus.INVALID
         db.flush()
         return False

@@ -1,0 +1,10 @@
+{
+  "name": "aiqbe-mathjax-validator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Renders LaTeX/mhchem snippets through real MathJax (server-side, via mathjax-full) to detect malformed notation. Invoked as a subprocess by backend/validation/notation.py -- see docs/PHASE6-SCIENTIFIC-CONTENT.md.",
+  "type": "module",
+  "dependencies": {
+    "mathjax-full": "^3.2.2"
+  }
+}
