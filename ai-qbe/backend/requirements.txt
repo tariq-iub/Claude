@@ -1,0 +1,26 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+sqlalchemy>=2.0
+alembic>=1.13
+celery>=5.3
+redis>=5.0
+python-jose[cryptography]>=3.3
+bcrypt>=4.0
+python-multipart>=0.0.9
+pydantic>=2.6
+pydantic-settings>=2.2
+jsonschema>=4.20
+requests>=2.31
+httpx>=0.27
+pytest>=7.4
+
+# RAG (Phase 3)
+pypdf>=4.0
+qdrant-client>=1.9
+numpy>=1.26
+
+# Optional, production-only: the real semantic embedding model
+# (backend/embeddings/sentence_transformers_provider.py). Not required for
+# the dev/test default (HashingEmbeddingProvider). Install separately on
+# the target workstation:
+#   pip install sentence-transformers>=2.6

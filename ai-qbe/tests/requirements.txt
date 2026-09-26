@@ -1,0 +1,7 @@
+pytest>=7.4
+-r ../scripts/benchmark/requirements.txt
+-r ../backend/requirements.txt
+
+# Test-only: generates a real PDF fixture for extraction tests
+# (tests/test_ingestion.py) rather than committing a binary file.
+fpdf2>=2.7

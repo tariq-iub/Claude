@@ -1,0 +1,12 @@
+[
+  {"id": "math-001", "prompt": "What is the derivative of x**4 + 3*x**2 - 5 with respect to x?", "sympy_expr": "x**4 + 3*x**2 - 5", "sympy_op": "diff", "sympy_var": "x", "expected_sympy": "4*x**3 + 6*x"},
+  {"id": "math-002", "prompt": "What is the indefinite integral of 3*x**2 with respect to x (ignore constant of integration)?", "sympy_expr": "3*x**2", "sympy_op": "integrate", "sympy_var": "x", "expected_sympy": "x**3"},
+  {"id": "math-003", "prompt": "Simplify (x**2 - 1) / (x - 1).", "sympy_expr": "(x**2 - 1) / (x - 1)", "sympy_op": "simplify", "sympy_var": "x", "expected_sympy": "x + 1"},
+  {"id": "math-004", "prompt": "Solve x**2 - 5*x + 6 = 0 for x.", "sympy_expr": "x**2 - 5*x + 6", "sympy_op": "solve", "sympy_var": "x", "expected_sympy": "[2, 3]"},
+  {"id": "math-005", "prompt": "Expand (x + 2)*(x - 3).", "sympy_expr": "(x + 2)*(x - 3)", "sympy_op": "expand", "sympy_var": "x", "expected_sympy": "x**2 - x - 6"},
+  {"id": "math-006", "prompt": "What is the derivative of sin(x)*x with respect to x?", "sympy_expr": "sin(x)*x", "sympy_op": "diff", "sympy_var": "x", "expected_sympy": "x*cos(x) + sin(x)"},
+  {"id": "math-007", "prompt": "Evaluate the definite integral of x from 0 to 4.", "sympy_expr": "x", "sympy_op": "definite_integrate", "sympy_var": "x", "bounds": [0, 4], "expected_sympy": "8"},
+  {"id": "math-008", "prompt": "Factor x**2 - 9.", "sympy_expr": "x**2 - 9", "sympy_op": "factor", "sympy_var": "x", "expected_sympy": "(x - 3)*(x + 3)"},
+  {"id": "math-009", "prompt": "What is the limit of (x**2 - 1)/(x - 1) as x approaches 1?", "sympy_expr": "(x**2 - 1)/(x - 1)", "sympy_op": "limit", "sympy_var": "x", "limit_point": 1, "expected_sympy": "2"},
+  {"id": "math-010", "prompt": "Solve the system: x + y = 5 and x - y = 1 for x and y.", "sympy_op": "linsolve", "system": ["x + y - 5", "x - y - 1"], "sympy_vars": ["x", "y"], "expected_sympy": "{(3, 2)}"}
+]

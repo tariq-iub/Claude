@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+results/
+*.db
+.env
+backend/alembic.ini.bak
