@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vpc"
+version = "0.1.0"
+description = "VP-CorrosionNet: physics-constrained virtual polarimetric imaging for copper/bronze corrosion assessment (research scaffold)"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "matplotlib", "torch", "pyyaml", "pandas", "scikit-image", "pillow"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
