@@ -1,0 +1,39 @@
+# Default configuration (synthetic smoke defaults; replace data section for real data).
+seed: 0
+data:
+  type: synthetic                 # synthetic | manifest
+  n_groups: 40                    # synthetic cartridges (identity = corrosion texture)
+  views_per_group: 2
+  size: 96                        # divisible by 16
+  split_ratios: [0.70, 0.15, 0.15]
+  split_seed: 0
+  manifest: null                  # CSV for type=manifest (see docs/DATASET_PROTOCOL.md)
+  root: .
+net:
+  color_spaces: [rgb, lab]        # any subset of: rgb, lab, hsv
+  fusion: mid                     # early | mid | late
+  texture: true
+  specdiff: true
+  vstokes: true
+  analyzer: true
+  geometry: true
+  roughness: true
+  psrf: true
+  uncertainty: true
+  coords: false
+  cartridge_prior: false
+  psrf_order: 1
+  illumination: environment       # environment | directional
+  base_material: copper           # copper | bronze_proxy
+  residual_gain: 0.0
+  width_mult: 1.0
+  dropout: 0.0
+train:
+  epochs: 20
+  batch_size: 8
+  lr: 0.003
+  weight_decay: 0.0001
+  device: cuda                    # falls back to CPU automatically
+  loss_weights: {seg: 1.0, cls: 0.3, rec: 0.5, pol: 0.5, per: 0.1, edge: 0.2, phys: 0.2, unc: 0.1, pit: 0.5, distill: 0.5}
+seeds: [0, 1, 2]
+severity_bins: [0.01, 0.05, 0.15, 0.30]   # PLACEHOLDER area-fraction cut-points; define with domain experts before data collection

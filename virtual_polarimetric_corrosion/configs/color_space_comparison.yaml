@@ -1,0 +1,5 @@
+# Compare colour representations (RGB vs CIELAB vs HSV and combinations) and fusion strategies.
+extends: default.yaml
+experiment: color_spaces_and_fusion
+color_space_arms: [cs_rgb, cs_lab, cs_hsv, cs_rgb+lab, cs_rgb+hsv, cs_rgb+lab+hsv]
+fusion_arms: [early, mid, late]

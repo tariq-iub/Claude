@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+virtual_polarimetric_corrosion/results/*
+!virtual_polarimetric_corrosion/results/.gitkeep

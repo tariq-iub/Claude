@@ -1,0 +1,20 @@
+check,max_over_samples,mean,reference,n,data_origin
+stack_vs_malus,0.0,0.0,exact up to float32 (<1e-4),32,SYNTHETIC
+four_angle_stokes,1.8812716007232666e-07,4.0009581425692886e-08,exact up to float32 (<1e-4),32,SYNTHETIC
+ls_stokes_8,9.98377799987793e-07,1.1400189647847725e-07,exact up to float32 (<1e-4),32,SYNTHETIC
+psrf_order1_resid,4.76837158203125e-07,6.472691893577576e-08,exact up to float32 (<1e-4),32,SYNTHETIC
+psrf_order2_ho_energy,2.4726233505134587e-07,3.538618817411354e-08,exact up to float32 (<1e-4),32,SYNTHETIC
+periodicity,1.1920928955078125e-07,1.4784745872020721e-08,exact up to float32 (<1e-4),32,SYNTHETIC
+orthogonal_sum,2.9802322387695312e-08,1.5599653124809265e-08,exact up to float32 (<1e-4),32,SYNTHETIC
+physics_only_untrained::environment::dolp_mae,0.04935228079557419,0.03160080191446468,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+physics_only_untrained::environment::aolp_err_deg,85.72934476365765,71.21901757659407,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+physics_only_untrained::environment::cos2,0.454608291387558,-0.6299663548124954,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+physics_only_untrained::directional::dolp_mae,0.047410450875759125,0.036625736858695745,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+physics_only_untrained::directional::aolp_err_deg,43.030161035229064,14.473123967077647,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+physics_only_untrained::directional::cos2,0.9760009050369263,0.7304687200812623,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+oracle_split_prior_normals::environment::dolp_mae,0.025582948699593544,0.01452323404373601,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+oracle_split_prior_normals::environment::aolp_err_deg,19.142450384870525,9.049847464598457,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+oracle_split_prior_normals::environment::cos2,0.9675252437591553,0.871327880769968,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+oracle_split_prior_normals::directional::dolp_mae,0.03152114897966385,0.01971609942847863,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+oracle_split_prior_normals::directional::aolp_err_deg,22.688966347244406,9.722127538303429,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC
+oracle_split_prior_normals::directional::cos2,0.9948226809501648,0.8438004925847054,AoLP chance level (uniform wrapped error) = 45 deg; oracle isolates specular/diffuse attribution; mode isolates illumination assumption,32,SYNTHETIC

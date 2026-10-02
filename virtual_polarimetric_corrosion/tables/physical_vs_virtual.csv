@@ -1,0 +1,1 @@
+config,seed,miou,mf1,severity_mae,pol_dolp_mae,pol_aolp_wrapped_err_deg,glare_supp_phys,glare_supp_virt,hl_area_red_phys,hl_area_red_virt,edge_preservation,texture_preservation,latency_ms_cpu,data_origin
