@@ -75,3 +75,20 @@ it beats anything on real corrosion imagery. Every performance/novelty
 claim in `RESEARCH.md` is explicitly framed as a hypothesis pending the
 literature/patent search and the real-data experimental protocol described
 there — see `RESEARCH.md §6, §8`.
+
+## Polarization inputs (experimental, synthetic-only so far)
+
+Optional measured-polarization channels (DoLP, normalised Stokes, AoLP unit vector, raw analyzer stack) built on
+`virtual_polarimetric_corrosion` (`vpc`) physics; see the design doc in the project files (`polarization-extension/DESIGN.md`).
+Default behaviour is unchanged (`FolderCorrosionDataset(pol_mode="none")`).
+
+```bash
+python tools/export_vpc_synthetic.py --out data/vpc_synth --groups 24 --views 3   # vpc render -> 6-class folder dataset + pol/*.npz
+python benchmarks/run_pol_wiring.py --data data/vpc_synth --epochs 8 --seeds 0 1 --cpu
+python -m pytest -q tests
+```
+
+Caveats: no polarization hardware or real polarization data exists yet; the synthetic generator itself puts class signal in the
+polarization channels, and the 7-to-6 class mapping in `tools/export_vpc_synthetic.py` is an assumption. The wiring benchmark
+checks plumbing only. Its `*_shuffled` control arms (polarization taken from a different sample) matched or beat the real arms in
+a small run, so those numbers show no polarization benefit; the fusion head itself adds capacity.

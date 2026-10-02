@@ -45,9 +45,12 @@ def train(
     amp: bool = True,
     grad_accum_steps: int = 1,
     extra_forward_kwargs: dict | None = None,
+    loaders=None,
 ):
     """
     model_fn: callable() -> nn.Module taking rgb (B,3,H,W) and returning logits (B,C,H,W)
+    loaders: optional (train_loader, val_loader); default is the built-in synthetic colour dataset. Inputs may carry extra
+    polarization channels if model_fn accepts them (see common/polarization.py::PolFusionWrapper).
     (uncertainty-producing models may return (logits, extra) tuples; handled below).
     """
     os.makedirs(out_dir, exist_ok=True)
@@ -57,7 +60,7 @@ def train(
     n_params = count_params(model)
     print(f"[engine] device={device} params={n_params:,} ({n_params/1e6:.4f} M)")
 
-    train_loader, val_loader = make_loaders(height, width, batch_size, seed=seed)
+    train_loader, val_loader = loaders if loaders is not None else make_loaders(height, width, batch_size, seed=seed)
     criterion = CombinedSegLoss()
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
@@ -117,9 +120,9 @@ def evaluate(model, loader, device):
 
 
 @torch.no_grad()
-def benchmark_speed(model, device, height=128, width=128, n_warmup=3, n_iters=10):
+def benchmark_speed(model, device, height=128, width=128, n_warmup=3, n_iters=10, in_channels=3):
     model.eval().to(device)
-    x = torch.randn(1, 3, height, width, device=device).clamp(0, 1)
+    x = torch.randn(1, in_channels, height, width, device=device).clamp(0, 1)
     for _ in range(n_warmup):
         model(x)
     if device.type == "cuda":
