@@ -63,3 +63,16 @@ def append_rows(name: str, rows: Iterable[dict], outdir: str = "results", data_o
     p = os.path.join(outdir, f"{name}.csv")
     df[cols].to_csv(p, mode="a", index=False, header=not os.path.exists(p))
     return p
+
+
+def summarize(df: pd.DataFrame, group_cols: List[str], metric_cols: List[str], level: float = 0.95) -> pd.DataFrame:
+    """Aggregate raw per-seed rows into mean, sd, 95 % t-interval and n (over seeds). Raw CSVs stay authoritative."""
+    from .stats import mean_sd_ci
+    rows = []
+    for key, g in df.groupby(group_cols, dropna=False):
+        key = key if isinstance(key, tuple) else (key,)
+        for m in metric_cols:
+            v = g[m].dropna().values
+            if len(v):
+                rows.append({**dict(zip(group_cols, key)), "metric": m, **mean_sd_ci(v, level)})
+    return pd.DataFrame(rows)

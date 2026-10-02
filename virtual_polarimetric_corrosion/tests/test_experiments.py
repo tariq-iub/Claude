@@ -213,7 +213,9 @@ def test_validation_harness_identities_are_exact_when_unclipped():
     for k in ("stack_vs_malus", "four_angle_stokes", "ls_stokes_8", "periodicity", "orthogonal_sum"):
         assert rows[k]["max_over_samples"] < 1e-4, k
     assert rows["psrf_order1_resid"]["max_over_samples"] < 1e-4 and rows["psrf_order2_ho_energy"]["max_over_samples"] < 1e-4
-    assert rows["physics_only_untrained::dolp_mae"]["data_origin"] == "SYNTHETIC"
+    assert rows["physics_only_untrained::environment::dolp_mae"]["data_origin"] == "SYNTHETIC"
+    # oracle (true D/S split + environment formulas) must be far better than the untrained baseline in the matching illumination mode
+    assert rows["oracle_split_prior_normals::environment::aolp_err_deg"]["mean"] < rows["physics_only_untrained::environment::aolp_err_deg"]["mean"]
 
 
 def test_sensor_clipping_switch():

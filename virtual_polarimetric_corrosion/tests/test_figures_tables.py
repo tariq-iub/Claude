@@ -97,3 +97,11 @@ def test_result_figures_render_from_fixture_data(tmp_path):
     for n in (7, 8, 10, 11, 12, 13, 14, 15):
         r = F.REGISTRY[n](outdir=str(out), results=str(res))
         assert r and os.path.exists(r[0]), n
+
+
+def test_summarize_means_and_ci():
+    from vpc.experiments.tables import summarize
+    df = pd.DataFrame({"arm": ["a"] * 3 + ["b"] * 3, "miou": [0.5, 0.6, 0.7, 0.2, 0.2, 0.2]})
+    s = summarize(df, ["arm"], ["miou"]).set_index("arm")
+    assert s.loc["a", "mean"] == pytest.approx(0.6) and s.loc["a", "n"] == 3 and s.loc["a", "ci_lo"] < 0.6 < s.loc["a", "ci_hi"]
+    assert s.loc["b", "sd"] == pytest.approx(0.0)

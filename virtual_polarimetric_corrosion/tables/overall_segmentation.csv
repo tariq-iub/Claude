@@ -1,0 +1,1 @@
+method,input,seed,miou,mdice,mprecision,mrecall,mspecificity,mf1,mbalanced_accuracy,pixel_accuracy,data_split,n_test_images,data_origin
