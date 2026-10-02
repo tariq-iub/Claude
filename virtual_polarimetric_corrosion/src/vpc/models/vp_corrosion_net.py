@@ -259,3 +259,11 @@ class VPCorrosionNet(nn.Module):
         z = out["latent"]
         sampler = lambda: self.optics.phys(self.optics.head.sample(z))
         return counterfactual_polarimetric_ensemble(sampler, self.analyzer, angles_deg, K, level)
+
+    @torch.no_grad()
+    def virtual_cross_polarized(self, out: dict, source_deg: float = 0.0, analyzer_offset_deg: float = 90.0) -> Tensor:
+        """Virtual cross-polarized image (source polarizer at source_deg, analyzer at source_deg + offset): (B,3,H,W) linear.
+        An ESTIMATE under the latent state z; use cpe-style sampling of z for its uncertainty."""
+        if self.optics is None:
+            raise RuntimeError("model has no optical branch")
+        return self.optics.phys.chain_intensity(out["latent"], source_deg, source_deg + analyzer_offset_deg)

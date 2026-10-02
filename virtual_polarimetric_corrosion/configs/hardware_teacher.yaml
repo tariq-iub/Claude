@@ -1,0 +1,5 @@
+extends: default.yaml
+experiment: hardware_to_software_gap
+teacher:
+  angles_deg: [0, 45, 90, 135]     # add 22.5/67.5/112.5/157.5 for the PSRF order-2 study
+configs: [A_physical_teacher, B_rgb_virtual, C_distilled_virtual]

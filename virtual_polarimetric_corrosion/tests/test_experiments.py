@@ -24,7 +24,7 @@ def test_synthetic_ground_truth_consistency():
         assert torch.isfinite(S).all() and (S[:, 0] >= 0).all()
         assert (torch.sqrt(S[:, 1] ** 2 + S[:, 2] ** 2) <= S[:, 0] + 1e-4).all()
         # analyzer stack equals Malus-form of S_gt before sensor noise/clipping: check on unclipped, low-noise render
-    cfg2 = SynthConfig(size=64, read_noise=0.0, shot_noise=0.0, exposure_range=(0.1, 0.2))
+    cfg2 = SynthConfig(size=64, read_noise=0.0, shot_noise=0.0, exposure_range=(0.1, 0.2), sensor_clip=False)
     d = render_view(make_group(5, cfg2), 9, cfg2)
     th = d["angles"] * math.pi / 180
     c, sn = torch.cos(2 * th).view(-1, 1, 1, 1), torch.sin(2 * th).view(-1, 1, 1, 1)
@@ -205,3 +205,20 @@ def test_train_loop_reduces_loss_smoke():
     h = [x["loss"] for x in r["history"]]
     assert h[-1] < h[0]
     assert "miou" in evaluate(m, tr, TrainConfig(device="cpu"))["summary"]
+
+
+def test_validation_harness_identities_are_exact_when_unclipped():
+    from vpc.experiments.pipeline import synthetic_validation
+    rows = {r["check"]: r for r in synthetic_validation(n_samples=3, size=64, seed=1)}
+    for k in ("stack_vs_malus", "four_angle_stokes", "ls_stokes_8", "periodicity", "orthogonal_sum"):
+        assert rows[k]["max_over_samples"] < 1e-4, k
+    assert rows["psrf_order1_resid"]["max_over_samples"] < 1e-4 and rows["psrf_order2_ho_energy"]["max_over_samples"] < 1e-4
+    assert rows["physics_only_untrained::dolp_mae"]["data_origin"] == "SYNTHETIC"
+
+
+def test_sensor_clipping_switch():
+    cfg = SynthConfig(size=64, sensor_clip=False, exposure_range=(2.0, 2.5))
+    d = render_view(make_group(2, cfg), 3, cfg)
+    assert d["lin"].max() > 1.0
+    cfg2 = SynthConfig(size=64, sensor_clip=True, exposure_range=(2.0, 2.5))
+    assert render_view(make_group(2, cfg2), 3, cfg2)["lin"].max() <= 1.0

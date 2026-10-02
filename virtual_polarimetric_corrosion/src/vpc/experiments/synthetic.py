@@ -51,6 +51,7 @@ class SynthConfig:
     read_noise: float = 0.004
     shot_noise: float = 0.01
     domain_randomization: bool = True
+    sensor_clip: bool = True          # False: keep radiance unclipped (exact-identity validation only; real sensors clip)
     texture_axial: int = 160
     texture_circ: int = 192
 
@@ -209,7 +210,8 @@ def render_view(group: Dict, seed: int, cfg: SynthConfig, force_mode: Optional[s
 
     def sense(lin: Tensor) -> Tensor:
         sig = torch.sqrt(cfg.read_noise ** 2 + cfg.shot_noise * lin.clamp_min(0))
-        return (lin + sig * torch.randn(lin.shape, generator=torch.Generator().manual_seed(int(rng.integers(1 << 31))))).clamp(0, 1)
+        out = lin + sig * torch.randn(lin.shape, generator=torch.Generator().manual_seed(int(rng.integers(1 << 31))))
+        return out.clamp(0, 1) if cfg.sensor_clip else out
 
     lin_rgb = sense(Ssc[..., 0])                                      # (H,W,C)
     stack_lin = sense(stack)
@@ -227,8 +229,14 @@ def render_view(group: Dict, seed: int, cfg: SynthConfig, force_mode: Optional[s
             prior = torch.where(obj_t.unsqueeze(0), prior, torch.tensor([0, 0, 1.0]).view(3, 1, 1))
         except ValueError:
             pass
+    sc = torch.from_numpy(wb).view(1, 1, 3) * exposure
+    latent_gt = {   # true latent optical state in the same radiometric scale as lin / S_gt (used for model validation & Fig. 6)
+        "D": (out["S_diffuse"][..., 0] * sc).permute(2, 0, 1).contiguous(), "S": (out["S_specular"][..., 0] * sc).permute(2, 0, 1).contiguous(),
+        "eta": inp.eta.permute(2, 0, 1).contiguous(), "kappa": inp.kappa.permute(2, 0, 1).contiguous(),
+        "n_diff": inp.n_diff.clone(), "rough": rough_t.clone(), "mode": mode,
+    }
     return {
-        "rgb": srgb, "lin": lin_rgb.permute(2, 0, 1), "stack": stack_lin.permute(0, 3, 1, 2),          # (A,3,H,W)
+        "latent_gt": latent_gt, "rgb": srgb, "lin": lin_rgb.permute(2, 0, 1), "stack": stack_lin.permute(0, 3, 1, 2),          # (A,3,H,W)
         "angles": torch.tensor(list(cfg.angles_deg)), "S_gt": Ssc.permute(2, 3, 0, 1).contiguous(),   # (3colour,3stokes,H,W)
         "normals": n_true.clone() if False else torch.from_numpy(n.astype(np.float32)).permute(2, 0, 1),
         "normals_prior": prior, "mask": mask, "pit_mask": (mask == 6).long(), "obj_mask": obj_t,

@@ -1,0 +1,4 @@
+extends: default.yaml
+experiment: ablation
+arms: cumulative                   # cumulative | leave_one_out | color_space | fusion
+include_distillation_arm: true     # requires hardware-teacher stacks

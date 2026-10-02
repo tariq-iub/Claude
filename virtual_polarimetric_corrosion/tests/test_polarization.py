@@ -124,3 +124,43 @@ def test_summarize_and_nll():
     assert (out["lo"] <= out["mean"]).all() and (out["hi"] >= out["mean"]).all()
     nll = heteroscedastic_nll(torch.zeros(3), torch.zeros(3), torch.ones(3))
     assert nll.item() == pytest.approx(0.5)
+
+
+def _spec_only_latent(az=0.4, zen=0.7, rough=0.1):
+    import math
+    n = torch.tensor([math.sin(zen) * math.cos(az), math.sin(zen) * math.sin(az), math.cos(zen)]).view(1, 3, 1, 1)
+    one = torch.ones(1, 1, 1, 1)
+    return {"n": n, "D": torch.zeros(1, 3, 1, 1), "S": 0.5 * torch.ones(1, 3, 1, 1), "r": rough * one, "eta": one, "k": one,
+            "rho": 0 * one, "phi2": torch.zeros(1, 2, 1, 1), "g": 0 * one}
+
+
+def test_cross_polarized_chain_extinction_and_leakage():
+    import math
+    from vpc.inverse.latent_optics import PhysicsStokesLayer
+    from vpc.optics.fresnel import fresnel_reflectance
+    phys = PhysicsStokesLayer()
+    z = _spec_only_latent()
+    psi = 0.4 + math.pi / 2                                    # s-axis azimuth (environment mode)
+    # pure s or pure p source: smooth specular reflection preserves the state -> crossed analyzer extinguishes
+    for src in (math.degrees(psi), math.degrees(psi) + 90.0):
+        assert phys.chain_intensity(z, src, src + 90.0).abs().max() < 1e-5
+    # parallel s-source: transmitted fraction = Rs / F0 * S
+    Rs, Rp, de = fresnel_reflectance(torch.tensor(0.7), phys.n0.view(3), phys.k0.view(3))
+    par = phys.chain_intensity(z, math.degrees(psi), math.degrees(psi))[0, :, 0, 0]
+    assert torch.allclose(par, Rs / (0.5 * (Rs + Rp)) * 0.5, atol=1e-5)   # S/F0 * Rs with S = 0.5
+    # 45 deg source: crossed leakage = |a-b|^2/4 per unit irradiance (Jones diag(sqrt Rs, sqrt Rp e^{i delta}))
+    a, b = torch.sqrt(Rs).to(torch.complex64), (torch.sqrt(Rp) * torch.exp(1j * de)).to(torch.complex64)
+    leak = phys.chain_intensity(z, math.degrees(psi) + 45.0, math.degrees(psi) + 135.0)[0, :, 0, 0]
+    expect = (a - b).abs() ** 2 / 4 / (0.5 * (Rs + Rp)) * 0.5
+    assert torch.allclose(leak, expect, atol=1e-5)
+
+
+def test_cross_polarized_removes_glare_keeps_diffuse():
+    import math
+    from vpc.inverse.latent_optics import PhysicsStokesLayer
+    phys = PhysicsStokesLayer()
+    z = _spec_only_latent(); z["D"] = 0.3 * torch.ones(1, 3, 1, 1)
+    psi_deg = math.degrees(0.4 + math.pi / 2)
+    cross = phys.chain_intensity(z, psi_deg, psi_deg + 90)
+    par = phys.chain_intensity(z, psi_deg, psi_deg)
+    assert (par > cross).all() and cross.min() > 0.1      # diffuse survives (~D/2), specular gone

@@ -1,0 +1,11 @@
+check,max_over_samples,mean,reference,n,data_origin
+stack_vs_malus,0.0,0.0,exact up to float32 (<1e-4),8,SYNTHETIC
+four_angle_stokes,1.1920928955078125e-07,3.844616003334522e-08,exact up to float32 (<1e-4),8,SYNTHETIC
+ls_stokes_8,4.628673195838928e-07,1.1810880096163601e-07,exact up to float32 (<1e-4),8,SYNTHETIC
+psrf_order1_resid,1.1920928955078125e-07,5.122274160385132e-08,exact up to float32 (<1e-4),8,SYNTHETIC
+psrf_order2_ho_energy,1.714716546530326e-07,4.0459276262616584e-08,exact up to float32 (<1e-4),8,SYNTHETIC
+periodicity,1.4901161193847656e-08,1.1175870895385742e-08,exact up to float32 (<1e-4),8,SYNTHETIC
+orthogonal_sum,1.4901161193847656e-08,1.3969838619232178e-08,exact up to float32 (<1e-4),8,SYNTHETIC
+physics_only_untrained::dolp_mae,0.042195942252874374,0.034071819856762886,untrained baseline: informs how much learning must add,8,SYNTHETIC
+physics_only_untrained::aolp_err_deg,89.71105818182994,59.696699595677444,untrained baseline: informs how much learning must add,8,SYNTHETIC
+physics_only_untrained::cos2,0.939578115940094,-0.33594417572021484,untrained baseline: informs how much learning must add,8,SYNTHETIC

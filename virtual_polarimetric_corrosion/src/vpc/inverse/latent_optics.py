@@ -19,6 +19,7 @@ import torch.nn.functional as F
 
 from ..geometry.normals import normalize
 from ..optics.fresnel import fresnel_reflectance, preset
+from ..optics.mueller import fresnel_mueller, rotate_mueller
 from ..optics.reflection import diffuse_dolp, roughness_depolarization
 
 Tensor = torch.Tensor
@@ -141,3 +142,47 @@ class PhysicsStokesLayer(nn.Module):
         m = torch.sqrt(s1 ** 2 + s2 ** 2 + 1e-12)
         scale = torch.minimum(torch.ones_like(m), s0 / m)
         return torch.stack([s0, s1 * scale, s2 * scale], dim=2)  # (B,C,3,H,W)
+
+    def chain_intensity(self, z: Dict[str, Tensor], source_deg: float, analyzer_deg: float, eta_c: Optional[Tensor] = None,
+                        k_c: Optional[Tensor] = None, n_diff: Optional[Tensor] = None) -> Tensor:
+        """Virtual source-polarizer -> surface -> analyzer chain (cross/parallel-polarized imaging), (B,3,H,W).
+
+        Specular term: full Mueller product M_A(theta_a) R(-psi) M_fresnel R(psi) S_src with S_src fully polarized at source_deg;
+        the latent specular radiance S is rescaled by its mean Fresnel reflectance so that the *unpolarized-illumination*
+        image is reproduced when the source is unpolarized. Diffuse term: depolarized by multiple scattering, so it keeps
+        its (weak) Atkinson-Hancock polarization and ignores the source state (PROPOSED approximation: the diffuse light of a
+        corrosion layer forgets the incident polarization). Cross-polarization therefore removes specular glare but keeps
+        ~half of the diffuse signal.
+
+        FRAME CONVENTION (open issue): source and analyzer angles are both expressed in the camera image-plane frame with the
+        reflection Jones matrix diag(r_s, -r_p) (zero retardance at normal incidence). Unambiguous cases are tested (source aligned
+        with s or p; normal incidence). For a source at 45 deg to the plane of incidence, the grazing-incidence phase flip
+        (delta -> pi) maps +45 to -45 deg, so whether a physical "crossed" pair blocks the glare depends on how the two polarizer
+        zeros are referenced across the mirror reflection. To be fixed by the hardware experiment before any quantitative use.
+        """
+        n, D, S = z["n"], z["D"], z["S"]
+        zen = torch.acos(n[:, 2:3].clamp(-1, 1))
+        az = torch.atan2(n[:, 1:2], n[:, 0:1])
+        eta_c = self.n0 * z["eta"] if eta_c is None else eta_c        # absolute constants may be supplied (validation with true optics)
+        k_c = self.k0 * z["k"] if k_c is None else k_c
+        if self.illumination == "environment":
+            theta, psi = zen, az + math.pi / 2
+        else:
+            l = F.normalize(self.light_dir, dim=0)
+            h = F.normalize(l + torch.tensor([0.0, 0.0, 1.0], device=l.device), dim=0)
+            theta = torch.acos(h[2].clamp(-1, 1)).expand_as(zen)
+            sdir = torch.cross(torch.tensor([0.0, 0.0, 1.0], device=l.device), l, dim=0)
+            psi = torch.atan2(sdir[1], sdir[0]).expand_as(zen)
+        Rs, Rp, delta = fresnel_reflectance(theta, eta_c, k_c)
+        M = rotate_mueller(fresnel_mueller(Rs, Rp, delta), psi.expand_as(Rs))          # (B,3,H,W,4,4) image frame
+        a = math.radians(source_deg)
+        S_src = torch.tensor([1.0, math.cos(2 * a), math.sin(2 * a), 0.0], device=M.device, dtype=M.dtype)
+        out = torch.einsum("...ij,j->...i", M, S_src)                                  # (B,3,H,W,4)
+        b = math.radians(analyzer_deg)
+        row = 0.5 * torch.tensor([1.0, math.cos(2 * b), math.sin(2 * b), 0.0], device=M.device, dtype=M.dtype)
+        I_spec_unit = (out * row).sum(-1)                                              # per unit incident irradiance
+        F0 = (0.5 * (Rs + Rp)).clamp_min(1e-6)
+        I_spec = S / F0 * I_spec_unit
+        rho_d = diffuse_dolp(zen, (1.5 * z["eta"]).clamp_min(1.1) if n_diff is None else n_diff)
+        I_diff = 0.5 * D * (1 + rho_d * torch.cos(2 * (az - b)))
+        return I_spec + I_diff
