@@ -86,7 +86,7 @@ public sealed class DatasetExporter(IProjectSerializer serializer)
                     else if (o.ImagesAsPng)
                     {
                         using var li = ImageLoader.Load(src);
-                        if (li.Info.Sha256 != img.Sha256) report.Warn($"{img.FileName}: checksum differs from the one recorded at import.");
+                        if (!string.IsNullOrEmpty(img.Sha256) && li.Info.Sha256 != img.Sha256) report.Warn($"{img.FileName}: checksum differs from the one recorded at import.");
                         MaskIO.WriteImagePng(dst, li.Bgr);
                     }
                     else
