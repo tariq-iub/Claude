@@ -1,0 +1,573 @@
+<Window x:Class="CuAnnotator.Desktop.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:CuAnnotator.Desktop.ViewModels"
+        xmlns:ctl="clr-namespace:CuAnnotator.Desktop.Controls"
+        xmlns:cv="clr-namespace:CuAnnotator.Desktop.Converters"
+        xmlns:inter="clr-namespace:CuAnnotator.Desktop.Interaction"
+        Title="{Binding Title}" Height="900" Width="1500" MinWidth="1000" MinHeight="640"
+        WindowStartupLocation="CenterScreen" Style="{StaticResource AppWindow}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Resources/Icons.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <cv:EnumEqualsConverter x:Key="EnumEq" />
+            <cv:NullToVisibilityConverter x:Key="NullToVis" />
+            <cv:BoolToVisibilityConverter x:Key="BoolToVis" />
+            <cv:NullableDoubleConverter x:Key="NullableDouble" />
+
+            <!-- Toolbar button: glyph from Segoe Fluent/MDL2 icons + caption. -->
+            <Style x:Key="TbButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <Setter Property="Padding" Value="6,3" />
+                <Setter Property="MinWidth" Value="46" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="5" />
+            <RowDefinition x:Name="BrowserRow" Height="132" MinHeight="0" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- ═══════════ A. Top toolbar ═══════════ -->
+        <Border Grid.Row="0" Background="{DynamicResource ToolbarBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,0,0,1" Padding="6,4">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <TextBlock Text="CuAnnotator" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource AccentStrong}" VerticalAlignment="Center" Margin="6,0,14,0" />
+                    <Button Style="{StaticResource TbButton}" Command="{Binding NewProjectCommand}" ToolTip="New project">
+                        <StackPanel><TextBlock Text="&#xE8F4;" Style="{StaticResource Glyph}" /><TextBlock Text="New" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding OpenProjectCommand}" ToolTip="Open project (Ctrl+O)">
+                        <StackPanel><TextBlock Text="&#xE8E5;" Style="{StaticResource Glyph}" /><TextBlock Text="Open" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding SaveProjectCommand}" ToolTip="Save project (Ctrl+S)">
+                        <StackPanel><TextBlock Text="&#xE74E;" Style="{StaticResource Glyph}" /><TextBlock Text="Save" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding SaveProjectAsCommand}" ToolTip="Save project as… (copy to another folder)">
+                        <StackPanel><TextBlock Text="&#xE792;" Style="{StaticResource Glyph}" /><TextBlock Text="Save as" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Fill="{DynamicResource PanelBorder}" Margin="6,4" />
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ImportImagesCommand}" ToolTip="Import images (JPEG, PNG, TIFF, BMP)">
+                        <StackPanel><TextBlock Text="&#xE8B5;" Style="{StaticResource Glyph}" /><TextBlock Text="Import" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ExportDatasetCommand}" ToolTip="Export dataset (masks, COCO, YOLO, native JSON)">
+                        <StackPanel><TextBlock Text="&#xEDE1;" Style="{StaticResource Glyph}" /><TextBlock Text="Export" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Fill="{DynamicResource PanelBorder}" Margin="6,4" />
+                    <Button Style="{StaticResource TbButton}" Command="{Binding UndoCommand}" ToolTip="Undo (Ctrl+Z)">
+                        <StackPanel><TextBlock Text="&#xE7A7;" Style="{StaticResource Glyph}" /><TextBlock Text="Undo" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding RedoCommand}" ToolTip="Redo (Ctrl+Y)">
+                        <StackPanel><TextBlock Text="&#xE7A6;" Style="{StaticResource Glyph}" /><TextBlock Text="Redo" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Fill="{DynamicResource PanelBorder}" Margin="6,4" />
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ZoomInCommand}" ToolTip="Zoom in (mouse wheel)">
+                        <StackPanel><TextBlock Text="&#xE8A3;" Style="{StaticResource Glyph}" /><TextBlock Text="Zoom +" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ZoomOutCommand}" ToolTip="Zoom out">
+                        <StackPanel><TextBlock Text="&#xE71F;" Style="{StaticResource Glyph}" /><TextBlock Text="Zoom −" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding FitImageCommand}" ToolTip="Fit image to window (F)">
+                        <StackPanel><TextBlock Text="&#xE9A6;" Style="{StaticResource Glyph}" /><TextBlock Text="Fit" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ActualPixelsCommand}" ToolTip="Actual pixels — 100 % (one image pixel per screen pixel)">
+                        <StackPanel><TextBlock Text="1:1" FontWeight="SemiBold" HorizontalAlignment="Center" FontSize="13" /><TextBlock Text="100 %" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ToggleOverlaysCommand}" ToolTip="Toggle overlays — before/after (O)">
+                        <StackPanel><TextBlock Text="&#xE81E;" Style="{StaticResource Glyph}" /><TextBlock Text="Overlays" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Rectangle Width="1" Fill="{DynamicResource PanelBorder}" Margin="6,4" />
+                    <StackPanel VerticalAlignment="Center" Margin="4,0">
+                        <TextBlock Text="Segmentation algorithm" FontSize="10.5" Foreground="{DynamicResource TextSecondary}" />
+                        <ComboBox ItemsSource="{Binding Algorithms}" SelectedItem="{Binding SelectedAlgorithm}" Width="150" ToolTip="Algorithm used for ROI segmentation" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <Button Style="{StaticResource TbButton}" Command="{Binding TaxonomyEditorCommand}" ToolTip="Taxonomy editor">
+                        <StackPanel><TextBlock Text="&#xE8FD;" Style="{StaticResource Glyph}" /><TextBlock Text="Classes" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ReviewQueueCommand}" ToolTip="Review queue">
+                        <StackPanel><TextBlock Text="&#xE73E;" Style="{StaticResource Glyph}" /><TextBlock Text="Review" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding QualityReportCommand}" ToolTip="Quality report (coverage, class distribution, validation, agreement, efficiency)">
+                        <StackPanel><TextBlock Text="&#xE9D9;" Style="{StaticResource Glyph}" /><TextBlock Text="QA" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding EvaluationCommand}" ToolTip="Compare algorithms against a reference mask inside the current ROI">
+                        <StackPanel><TextBlock Text="&#xE9D2;" Style="{StaticResource Glyph}" /><TextBlock Text="Evaluate" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding AuditLogCommand}" ToolTip="Audit trail">
+                        <StackPanel><TextBlock Text="&#xE81C;" Style="{StaticResource Glyph}" /><TextBlock Text="Audit" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ToggleThemeCommand}" ToolTip="Light / dark theme">
+                        <StackPanel><TextBlock Text="&#xE793;" Style="{StaticResource Glyph}" /><TextBlock Text="Theme" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding ProjectSettingsCommand}" ToolTip="Project and user settings">
+                        <StackPanel><TextBlock Text="&#xE713;" Style="{StaticResource Glyph}" /><TextBlock Text="Settings" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource TbButton}" Command="{Binding HelpCommand}" ToolTip="Help and keyboard shortcuts (F1)">
+                        <StackPanel><TextBlock Text="&#xE897;" Style="{StaticResource Glyph}" /><TextBlock Text="Help" FontSize="10.5" HorizontalAlignment="Center" /></StackPanel>
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ═══════════ Body ═══════════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition x:Name="PanelColumn" Width="340" MinWidth="0" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ═══════════ B. Left annotation toolbox ═══════════ -->
+            <Border Grid.Column="0" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,0,1,0" Padding="3,6">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Select / Pan (V) — click to select, drag to pan"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Select}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Select}" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}" /></RadioButton>
+                        <Separator Margin="4,4" />
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Rectangle ROI (R) — loose box, then automatic segmentation"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Rectangle}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Rectangle}" StrokeDashArray="2 1" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Polygon ROI (P) — click vertices, double-click/Enter to close"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Polygon}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Polygon}" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Freehand lasso (L)"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Lasso}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Lasso}" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Smart contour (S) — hybrid GrabCut + CIELAB + edge refinement"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=SmartContour}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.SmartContour}" /></RadioButton>
+                        <Separator Margin="4,4" />
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Foreground brush (B) — must-include guidance"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=ForegroundBrush}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.ForegroundBrush}" Stroke="#2E9E55" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Background brush (N) — must-exclude guidance"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=BackgroundBrush}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.BackgroundBrush}" Stroke="#D04040" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Boundary refinement brush (K) — snaps to nearby edges"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=BoundaryBrush}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.BoundaryBrush}" Stroke="#C9A000" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Eraser (E) — remove pixels from the selected annotation"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Eraser}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Eraser}" /></RadioButton>
+                        <Separator Margin="4,4" />
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Polygon vertex editor (A)"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=VertexEditor}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.VertexEditor}" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Split region (X)"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Split}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Split}" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Merge regions (M) — Ctrl+click several, Enter to merge"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Merge}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Merge}" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Fill region holes (H)"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Fill}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Fill}" /></RadioButton>
+                        <Separator Margin="4,4" />
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Colour-based selection (C) — CIEDE2000 similarity"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=ColorSelect}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.ColorSelect}" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Magic wand (W) — connected colour region"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=MagicWand}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.MagicWand}" /></RadioButton>
+                        <RadioButton Style="{StaticResource ToolButton}" GroupName="tools" ToolTip="Measure / inspect (U)"
+                                     IsChecked="{Binding ActiveTool, Converter={StaticResource EnumEq}, ConverterParameter=Measure}"><Path Style="{StaticResource ToolIcon}" Data="{StaticResource Icon.Measure}" /></RadioButton>
+                        <Separator Margin="4,6" />
+                        <TextBlock Text="Brush" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
+                        <TextBox Text="{Binding BrushRadius, UpdateSourceTrigger=PropertyChanged}" Width="38" HorizontalContentAlignment="Center" ToolTip="Brush radius in image pixels" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- ═══════════ C. Central image workspace ═══════════ -->
+            <Grid Grid.Column="1">
+                <ctl:ImageViewport x:Name="Viewport" Scene="{Binding Editor.Scene}" />
+                <!-- Empty state -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24" CornerRadius="8" Background="{DynamicResource PanelBackground}"
+                        BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Editor}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel MaxWidth="420">
+                        <TextBlock Text="Copper Corrosion Annotation Studio" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource AccentStrong}" />
+                        <TextBlock TextWrapping="Wrap" Margin="0,8,0,12" Foreground="{DynamicResource TextSecondary}"
+                                   Text="Create a project, import images, then draw a loose rectangle around a corrosion region. CuAnnotator proposes the boundary; you refine and accept it." />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="New project…" Style="{StaticResource PrimaryButton}" Command="{Binding NewProjectCommand}" />
+                            <Button Content="Open project…" Style="{StaticResource SecondaryButton}" Command="{Binding OpenProjectCommand}" />
+                            <Button Content="Import images…" Style="{StaticResource SecondaryButton}" Command="{Binding ImportImagesCommand}" />
+                        </StackPanel>
+                        <TextBlock Text="Recent projects" Style="{StaticResource Caption}" Margin="0,14,0,4" />
+                        <ItemsControl ItemsSource="{Binding RecentProjects}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource IconButton}" HorizontalAlignment="Left" Padding="4,2"
+                                            Command="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                                        <TextBlock Text="{Binding}" Foreground="{DynamicResource Accent}" TextTrimming="CharacterEllipsis" MaxWidth="380" />
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <!-- Minimap navigator -->
+                <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10" Width="190" Height="140" CornerRadius="6"
+                        Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1" Opacity="0.94"
+                        Visibility="{Binding IsChecked, ElementName=MinimapToggle, Converter={StaticResource BoolToVis}}">
+                    <ctl:Minimap x:Name="Minimap" Margin="4" />
+                </Border>
+                <!-- Flash feedback for class assignment -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0" Padding="14,6" CornerRadius="14"
+                        Background="{DynamicResource Accent}" Visibility="{Binding FlashText, Converter={StaticResource NullToVis}}">
+                    <TextBlock Text="{Binding FlashText}" Foreground="{DynamicResource OnAccent}" FontWeight="SemiBold" />
+                </Border>
+                <!-- View options -->
+                <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="6,3" CornerRadius="6" Opacity="0.95"
+                        Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox ItemsSource="{Binding OverlayModes}" SelectedItem="{Binding OverlayMode}" Width="118" ToolTip="Overlay comparison mode (normal, before, split view, checkerboard, high-contrast contours)" />
+                        <TextBlock Text="Opacity" VerticalAlignment="Center" Margin="8,0,4,0" Foreground="{DynamicResource TextSecondary}" />
+                        <Slider Minimum="0" Maximum="1" Width="80" Value="{Binding OverlayOpacity}" VerticalAlignment="Center" />
+                        <CheckBox Content="Fill" IsChecked="{Binding ShowMasks}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        <CheckBox Content="Boundaries" IsChecked="{Binding ShowBoundaries}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        <CheckBox Content="Pixel grid" IsChecked="{Binding ShowGrid}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        <ToggleButton x:Name="MinimapToggle" Style="{StaticResource ToggleIconButton}" IsChecked="True" ToolTip="Minimap navigator" Margin="6,0,0,0">
+                            <TextBlock Text="&#xE707;" Style="{StaticResource Glyph}" FontSize="13" />
+                        </ToggleButton>
+                    </StackPanel>
+                </Border>
+                <ProgressBar VerticalAlignment="Bottom" Height="3" IsIndeterminate="{Binding Editor.IsSegmenting}"
+                             Visibility="{Binding Editor.IsSegmenting, Converter={StaticResource BoolToVis}}" />
+            </Grid>
+
+            <GridSplitter Grid.Column="2" HorizontalAlignment="Stretch" ResizeDirection="Columns" ToolTip="Drag to resize; double-click to collapse"
+                          MouseDoubleClick="TogglePanel" />
+
+            <!-- ═══════════ D. Right properties & taxonomy panel ═══════════ -->
+            <Border Grid.Column="3" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="1,0,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,4">
+                    <StackPanel>
+                        <!-- Class palette -->
+                        <Expander Header="Classes" IsExpanded="True" Foreground="{DynamicResource TextPrimary}">
+                            <StackPanel>
+                                <TextBox Text="{Binding ClassFilter, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search classes by name, formula or category" Margin="0,4" />
+                                <ListBox ItemsSource="{Binding ClassesView}" SelectedItem="{Binding ActiveClass}" MaxHeight="230">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ClassItemViewModel}">
+                                            <DockPanel Margin="0,1" ToolTip="{Binding Description}">
+                                                <Border Width="14" Height="14" CornerRadius="3" Background="{Binding ColorBrush}" BorderBrush="#40000000" BorderThickness="1" Margin="0,0,6,0" />
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Shortcut}" Foreground="{DynamicResource TextSecondary}" Margin="6,0,0,0" />
+                                                <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False"><Setter Property="Opacity" Value="0.45" /></DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style TargetType="ListBoxItem">
+                                            <EventSetter Event="MouseDoubleClick" Handler="ClassDoubleClick" />
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                </ListBox>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Text="Enter accepts with the selected class; number keys accept/relabel directly. Double-click a class to assign it." />
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <TextBlock Text="Verification on accept" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <ComboBox ItemsSource="{Binding VerificationStatuses}" SelectedItem="{Binding DefaultVerification}" Width="160" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Segmentation settings -->
+                        <Expander Header="Segmentation settings" IsExpanded="True" Foreground="{DynamicResource TextPrimary}" Margin="0,6,0,0">
+                            <StackPanel>
+                                <Grid Margin="0,4,0,0">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /></Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="Processing quality" VerticalAlignment="Center" />
+                                    <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Qualities}" SelectedItem="{Binding Parameters.Quality}" />
+                                    <TextBlock Grid.Row="1" Text="GrabCut iterations" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Parameters.GrabCutIterations}" />
+                                    <TextBlock Grid.Row="2" Text="Colour difference metric" VerticalAlignment="Center" />
+                                    <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Metrics}" SelectedItem="{Binding Parameters.ColorMetric}" />
+                                    <TextBlock Grid.Row="3" Text="Colour similarity threshold (ΔE)" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Parameters.ColorThreshold}" />
+                                    <TextBlock Grid.Row="4" Text="Boundary smoothing σ (px)" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Parameters.BoundarySmoothing}" />
+                                    <TextBlock Grid.Row="5" Text="Minimum region area (px, 0 = off)" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Parameters.MinComponentArea}" />
+                                    <TextBlock Grid.Row="6" Text="Opening / closing radius" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal">
+                                        <TextBox Text="{Binding Parameters.OpeningRadius}" Width="52" /><TextBox Text="{Binding Parameters.ClosingRadius}" Width="52" Margin="6,1,0,1" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="7" Text="Context margin (fraction of ROI)" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding Parameters.RoiContextMargin}" />
+                                    <TextBlock Grid.Row="8" Text="Active contour mode" VerticalAlignment="Center" />
+                                    <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{Binding ContourModes}" SelectedItem="{Binding Parameters.ActiveContourMode}" />
+                                    <TextBlock Grid.Row="9" Text="Contour iterations / smoothing" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Row="9" Grid.Column="1" Orientation="Horizontal">
+                                        <TextBox Text="{Binding Parameters.ActiveContourIterations}" Width="52" /><TextBox Text="{Binding Parameters.ActiveContourSmoothing}" Width="52" Margin="6,1,0,1" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="10" Text="Edge attraction α / balloon" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Row="10" Grid.Column="1" Orientation="Horizontal">
+                                        <TextBox Text="{Binding Parameters.EdgeAttraction}" Width="52" /><TextBox Text="{Binding Parameters.Balloon}" Width="52" Margin="6,1,0,1" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="11" Text="Region influence λ in / out" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Row="11" Grid.Column="1" Orientation="Horizontal">
+                                        <TextBox Text="{Binding Parameters.RegionLambdaInside}" Width="52" /><TextBox Text="{Binding Parameters.RegionLambdaOutside}" Width="52" Margin="6,1,0,1" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Row="12" Text="Convergence tolerance" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="12" Grid.Column="1" Text="{Binding Parameters.ConvergenceTolerance}" />
+                                    <TextBlock Grid.Row="13" Text="Watershed auto-marker ΔE" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="13" Grid.Column="1" Text="{Binding Parameters.WatershedAutoMarkerDeltaE}" />
+                                    <TextBlock Grid.Row="14" Text="Polygon simplification ε (view only)" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="14" Grid.Column="1" Text="{Binding Parameters.PolygonSimplification}" />
+                                    <TextBlock Grid.Row="15" Text="Random seed" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="15" Grid.Column="1" Text="{Binding Parameters.RandomSeed}" />
+                                </Grid>
+                                <WrapPanel Margin="0,4,0,0">
+                                    <CheckBox Content="Morphological cleanup" IsChecked="{Binding Parameters.MorphologicalCleanup}" Margin="0,2,10,2" />
+                                    <CheckBox Content="Preserve internal holes" IsChecked="{Binding Parameters.PreserveHoles}" Margin="0,2,10,2" />
+                                    <CheckBox Content="Spatial connectivity" IsChecked="{Binding Parameters.RequireConnectivity}" Margin="0,2,10,2" />
+                                    <CheckBox Content="Edge barrier (Canny)" IsChecked="{Binding Parameters.UseEdgeBarrier}" Margin="0,2,10,2" />
+                                    <CheckBox Content="Keep only seeded parts" IsChecked="{Binding Parameters.KeepOnlySeededComponents}" Margin="0,2,10,2" />
+                                    <CheckBox Content="Live preview" IsChecked="{Binding LivePreview}" Margin="0,2,10,2" />
+                                    <CheckBox Content="Class suggestions" IsChecked="{Binding ClassAssistEnabled}" Margin="0,2,10,2" />
+                                </WrapPanel>
+                                <TextBlock Text="Hybrid stages" Style="{StaticResource Caption}" />
+                                <WrapPanel>
+                                    <CheckBox Content="GrabCut" IsChecked="{Binding Parameters.HybridUseGrabCut}" Margin="0,2,10,2" />
+                                    <CheckBox Content="CIELAB refinement" IsChecked="{Binding Parameters.HybridUseLabRefinement}" Margin="0,2,10,2" />
+                                    <CheckBox Content="Edge refinement" IsChecked="{Binding Parameters.HybridUseEdgeRefinement}" Margin="0,2,10,2" />
+                                </WrapPanel>
+                                <WrapPanel Margin="0,6,0,0">
+                                    <Button Content="Preview / Refine (G)" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.RunSegmentationCommand}" />
+                                    <Button Content="Apply (Enter)" Style="{StaticResource PrimaryButton}" Command="{Binding Editor.AcceptCandidateCommand}" />
+                                    <Button Content="Cancel (Esc)" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.CancelSegmentationCommand}" />
+                                    <Button Content="Clear guidance" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.ClearGuidanceCommand}" />
+                                </WrapPanel>
+                                <TextBlock Text="{Binding Editor.SegmentationStatus}" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{DynamicResource AccentStrong}" />
+                                <TextBlock Text="{Binding Editor.CandidateSuggestion}" TextWrapping="Wrap" Margin="0,4,0,0" FontStyle="Italic"
+                                           Visibility="{Binding Editor.CandidateSuggestion, Converter={StaticResource NullToVis}}" />
+                                <Expander Header="Intermediate stages / diagnostics" Margin="0,4,0,0" Foreground="{DynamicResource TextSecondary}">
+                                    <TextBlock Text="{Binding Editor.StagesText}" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" />
+                                </Expander>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Selected annotation -->
+                        <Expander Header="Selected annotation" IsExpanded="True" Foreground="{DynamicResource TextPrimary}" Margin="0,6,0,0"
+                                  DataContext="{Binding Editor.SelectedAnnotation}">
+                            <StackPanel Margin="0,4,0,0">
+                                <TextBlock Text="No annotation selected." Foreground="{DynamicResource TextSecondary}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers><DataTrigger Binding="{Binding}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <StackPanel Visibility="{Binding Converter={StaticResource NullToVis}}">
+                                    <DockPanel>
+                                        <Border Width="16" Height="16" CornerRadius="3" Background="{Binding ClassBrush}" Margin="0,0,6,0" />
+                                        <TextBlock Text="{Binding ClassName}" FontWeight="SemiBold" FontSize="13" />
+                                        <TextBlock Text="{Binding ShortId, StringFormat=  ID {0}…}" Foreground="{DynamicResource TextSecondary}" />
+                                    </DockPanel>
+                                    <TextBlock Text="Display name" Style="{StaticResource Caption}" />
+                                    <TextBox Text="{Binding DisplayName, UpdateSourceTrigger=LostFocus}" />
+                                    <TextBlock Text="Verification status" Style="{StaticResource Caption}" />
+                                    <ComboBox ItemsSource="{Binding DataContext.VerificationStatuses, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding Verification}" />
+                                    <TextBlock Text="{Binding AssignmentText}" Style="{StaticResource Caption}" />
+                                    <ItemsControl ItemsSource="{Binding Evidence}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock TextWrapping="Wrap" FontSize="11.5"><Run Text="•" /> <Run Text="{Binding Type, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="{Binding Source, Mode=OneWay}" /> <Run Text="{Binding Notes, Mode=OneWay}" Foreground="{DynamicResource TextSecondary}" /></TextBlock>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Button Content="Add verification evidence…" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                            Command="{Binding DataContext.Editor.AddEvidenceCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    <TextBlock Text="{Binding SuggestionText}" TextWrapping="Wrap" FontStyle="Italic" Margin="0,6,0,0" Visibility="{Binding HasSuggestion, Converter={StaticResource BoolToVis}}" />
+                                    <Button Content="Accept suggested class" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Visibility="{Binding HasSuggestion, Converter={StaticResource BoolToVis}}"
+                                            Command="{Binding DataContext.Editor.AcceptSuggestionCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="Severity" Style="{StaticResource Caption}" />
+                                            <ComboBox ItemsSource="{Binding DataContext.SeverityLevels, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding Severity}" IsEditable="True" Text="{Binding Severity, UpdateSourceTrigger=LostFocus}" Margin="0,1,6,1" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="Reviewer assessment (0–1)" Style="{StaticResource Caption}" />
+                                            <TextBox Text="{Binding ReviewerConfidence, Converter={StaticResource NullableDouble}, UpdateSourceTrigger=LostFocus}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Text="Notes" Style="{StaticResource Caption}" />
+                                    <TextBox Text="{Binding Notes, UpdateSourceTrigger=LostFocus}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="52" />
+                                    <CheckBox Content="Visible" IsChecked="{Binding IsVisible}" />
+                                    <TextBlock Text="Geometry" Style="{StaticResource SectionHeader}" />
+                                    <TextBlock FontSize="11.5" TextWrapping="Wrap">
+                                        <Run Text="Area: " /><Run Text="{Binding AreaText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Bounding box: " /><Run Text="{Binding BoundingBoxText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Centroid: " /><Run Text="{Binding CentroidText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Perimeter: " /><Run Text="{Binding PerimeterText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="{Binding ComponentsText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Geometry source: " /><Run Text="{Binding GeometrySourceText, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock Text="Provenance" Style="{StaticResource SectionHeader}" />
+                                    <TextBlock FontSize="11.5" TextWrapping="Wrap">
+                                        <Run Text="Algorithm: " /><Run Text="{Binding Algorithm, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Created: " /><Run Text="{Binding CreatedText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Modified: " /><Run Text="{Binding ModifiedText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Review: " /><Run Text="{Binding ReviewText, Mode=OneWay}" /><LineBreak />
+                                        <Run Text="Revision: " /><Run Text="{Binding Revision, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <Expander Header="Algorithm parameters" Foreground="{DynamicResource TextSecondary}">
+                                        <TextBlock Text="{Binding ParametersText}" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" />
+                                    </Expander>
+                                    <Expander Header="Revision history" Foreground="{DynamicResource TextSecondary}">
+                                        <ItemsControl ItemsSource="{Binding Revisions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <DockPanel Margin="0,2">
+                                                        <Button DockPanel.Dock="Right" Content="Restore" Style="{StaticResource SecondaryButton}" Padding="6,1"
+                                                                Command="{Binding DataContext.Editor.RestoreRevisionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                        <TextBlock FontSize="11" TextWrapping="Wrap">
+                                                            <Run Text="{Binding Revision, StringFormat=r{0}, Mode=OneWay}" FontWeight="SemiBold" />
+                                                            <Run Text="{Binding Timestamp, StringFormat={}{0:yyyy-MM-dd HH:mm}, Mode=OneWay}" />
+                                                            <Run Text="{Binding Reason, Mode=OneWay}" Foreground="{DynamicResource TextSecondary}" />
+                                                        </TextBlock>
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Expander>
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Region operations -->
+                        <Expander Header="Region operations" Foreground="{DynamicResource TextPrimary}" Margin="0,6,0,0">
+                            <WrapPanel Margin="0,4,0,0">
+                                <Button Content="Delete" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.DeleteSelectedCommand}" ToolTip="Delete selected (Del)" />
+                                <Button Content="Merge" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.MergeSelectedCommand}" />
+                                <Button Content="Union" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.UnionCommand}" ToolTip="Shown annotation ∪ other selected" />
+                                <Button Content="Intersect" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.IntersectCommand}" />
+                                <Button Content="Subtract" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.SubtractCommand}" ToolTip="Shown annotation minus other selected" />
+                                <Button Content="Fill holes" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.FillHolesCommand}" />
+                                <Button Content="Duplicate" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.DuplicateSelectedCommand}" />
+                                <Button Content="Re-segment" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.ResegmentSelectedCommand}" ToolTip="Refine the selected annotation with the current algorithm" />
+                                <Button Content="Export mask…" Style="{StaticResource SecondaryButton}" Command="{Binding ExportCurrentMaskCommand}" ToolTip="8-bit class-ID PNG of this image" />
+                                <Button Content="Binary mask…" Style="{StaticResource SecondaryButton}" Command="{Binding ExportSelectedBinaryMaskCommand}" ToolTip="Selected annotations, or the active class" />
+                                <Button Content="Region statistics (CSV)…" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.ExportRegionStatisticsCommand}" />
+                            </WrapPanel>
+                        </Expander>
+
+                        <!-- Annotation list -->
+                        <Expander Header="Annotations on this image" Foreground="{DynamicResource TextPrimary}" Margin="0,6,0,0">
+                            <ListBox ItemsSource="{Binding Editor.Annotations}" SelectedItem="{Binding Editor.SelectedAnnotation}" MaxHeight="220">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:AnnotationViewModel}">
+                                        <DockPanel>
+                                            <Border Width="12" Height="12" CornerRadius="2" Background="{Binding ClassBrush}" Margin="0,0,6,0" />
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Verification}" Foreground="{DynamicResource TextSecondary}" FontSize="11" Margin="6,0,0,0" />
+                                            <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Expander>
+
+                        <!-- Assistance -->
+                        <Expander Header="Smart suggestions &amp; batch assistance" Foreground="{DynamicResource TextPrimary}" Margin="0,6,0,0">
+                            <StackPanel Margin="0,4,0,0">
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource Caption}"
+                                           Text="Candidate regions are visual proposals (CIELAB similarity to existing classes). Each needs your acceptance and class assignment." />
+                                <WrapPanel>
+                                    <Button Content="Find region suggestions" Style="{StaticResource SecondaryButton}" Command="{Binding Editor.FindRegionSuggestionsCommand}" />
+                                    <Button Content="Use this image as batch reference" Style="{StaticResource SecondaryButton}" Command="{Binding CaptureBatchReferencesCommand}" />
+                                    <Button Content="Clear reference" Style="{StaticResource SecondaryButton}" Command="{Binding ClearBatchReferencesCommand}" />
+                                </WrapPanel>
+                                <TextBlock Text="{Binding BatchReferenceText}" TextWrapping="Wrap" FontSize="11" Margin="0,2" />
+                                <ListBox ItemsSource="{Binding Editor.RegionCandidates}" MaxHeight="160">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Right" Content="Preview" Style="{StaticResource SecondaryButton}" Padding="6,1"
+                                                        Command="{Binding DataContext.Editor.PreviewRegionCandidateCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                <TextBlock Text="{Binding Reason}" TextWrapping="Wrap" FontSize="11" />
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Pixel inspector -->
+                        <Expander Header="Pixel inspector" IsExpanded="True" Foreground="{DynamicResource TextPrimary}" Margin="0,6,0,10">
+                            <TextBlock Text="{Binding Editor.PixelInfo}" FontFamily="Consolas" FontSize="11.5" Margin="0,4,0,0" />
+                        </Expander>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" ResizeDirection="Rows" ToolTip="Drag to resize; double-click to collapse" MouseDoubleClick="ToggleBrowser" />
+
+        <!-- ═══════════ E. Image browser ═══════════ -->
+        <Border Grid.Row="3" Background="{DynamicResource PanelAltBackground}" BorderBrush="{DynamicResource PanelBorder}" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left" Width="170" Margin="8,6">
+                    <TextBlock Text="{Binding ImageIndexText}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding ProgressText}" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondary}" FontSize="11" />
+                    <ComboBox ItemsSource="{Binding WorkflowStates}" SelectedItem="{Binding SelectedImage.State, Mode=OneWay}" Margin="0,4,0,0"
+                              ToolTip="Review workflow state of this image" SelectionChanged="WorkflowChanged" />
+                    <Button Content="Image metadata…" Style="{StaticResource SecondaryButton}" Command="{Binding EditImageMetadataCommand}" Margin="0,4,0,0" />
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Images}" SelectedItem="{Binding SelectedImage}" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate><VirtualizingStackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ImageItemViewModel}">
+                            <StackPanel Width="128" Margin="2" ToolTip="{Binding Dimensions}">
+                                <Border Height="80" Background="{DynamicResource ViewportBackground}" CornerRadius="4">
+                                    <Image Source="{Binding Thumbnail}" Stretch="Uniform" />
+                                </Border>
+                                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" FontSize="11" />
+                                <TextBlock FontSize="10" Foreground="{DynamicResource TextSecondary}">
+                                    <Run Text="{Binding AnnotationCount, Mode=OneWay}" /><Run Text=" ann. · " /><Run Text="{Binding State, Mode=OneWay}" />
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- ═══════════ Status bar ═══════════ -->
+        <Border Grid.Row="4" Background="{DynamicResource AccentStrong}" Padding="10,3">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                    <TextBlock Text="{Binding Editor.Image.Width, StringFormat={}{0} ×}" Foreground="{DynamicResource OnAccent}" />
+                    <TextBlock Text="{Binding Editor.Image.Height, StringFormat={} {0} px}" Foreground="{DynamicResource OnAccent}" Margin="0,0,14,0" />
+                    <TextBlock Text="{Binding ZoomText}" Foreground="{DynamicResource OnAccent}" Margin="0,0,14,0" />
+                    <TextBlock Text="{Binding Editor.CursorText}" Foreground="{DynamicResource OnAccent}" MinWidth="110" Margin="0,0,14,0" />
+                    <TextBlock Text="{Binding ActiveTool, StringFormat=Tool: {0}}" Foreground="{DynamicResource OnAccent}" Margin="0,0,14,0" />
+                    <TextBlock Text="● Unsaved changes" Foreground="#FFD27F" Margin="0,0,14,0" Visibility="{Binding IsDirty, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Text="{Binding AutosaveStatus}" Foreground="{DynamicResource OnAccent}" Opacity="0.85" />
+                    <ProgressBar Width="120" Height="10" Margin="12,0,0,0" Value="{Binding Progress}" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource OnAccent}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

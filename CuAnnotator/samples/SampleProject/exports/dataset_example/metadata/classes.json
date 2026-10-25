@@ -1,0 +1,122 @@
+[
+  {
+    "id": 0,
+    "name": "Unlabeled",
+    "formula": null,
+    "description": "Pixels not yet annotated",
+    "color": "#000000",
+    "parent": null,
+    "enabled": true,
+    "reserved": true,
+    "requiredVerification": "Unverified",
+    "yoloIndex": null
+  },
+  {
+    "id": 1,
+    "name": "Healthy Copper",
+    "formula": null,
+    "description": "Pristine or visually unaffected copper",
+    "color": "#E0A060",
+    "parent": "Copper Surface/Healthy",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "VisuallyEstimated",
+    "yoloIndex": 0
+  },
+  {
+    "id": 2,
+    "name": "Cu2O",
+    "formula": "Cu\u2082O",
+    "description": "Cuprous oxide (cuprite)",
+    "color": "#D03030",
+    "parent": "Copper Surface/Corroded/Oxides",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "ExpertReviewed",
+    "yoloIndex": 1
+  },
+  {
+    "id": 3,
+    "name": "CuO",
+    "formula": "CuO",
+    "description": "Cupric oxide (tenorite)",
+    "color": "#303030",
+    "parent": "Copper Surface/Corroded/Oxides",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "ExpertReviewed",
+    "yoloIndex": 2
+  },
+  {
+    "id": 4,
+    "name": "CuCl",
+    "formula": "CuCl",
+    "description": "Cuprous chloride (nantokite)",
+    "color": "#9AD0C0",
+    "parent": "Copper Surface/Corroded/Chlorides",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "InstrumentallyVerified",
+    "yoloIndex": 3
+  },
+  {
+    "id": 5,
+    "name": "CuCl2",
+    "formula": "CuCl\u2082",
+    "description": "Copper(II) chloride",
+    "color": "#2080D0",
+    "parent": "Copper Surface/Corroded/Chlorides",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "InstrumentallyVerified",
+    "yoloIndex": 4
+  },
+  {
+    "id": 6,
+    "name": "Malachite",
+    "formula": "Cu\u2082CO\u2083(OH)\u2082",
+    "description": "Basic copper carbonate",
+    "color": "#20A050",
+    "parent": "Copper Surface/Corroded/Carbonates",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "ExpertReviewed",
+    "yoloIndex": 5
+  },
+  {
+    "id": 7,
+    "name": "Brochantite",
+    "formula": "Cu\u2084SO\u2084(OH)\u2086",
+    "description": "Basic copper sulfate (not a carbonate)",
+    "color": "#40C0A0",
+    "parent": "Copper Surface/Corroded/Sulfates",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "InstrumentallyVerified",
+    "yoloIndex": 6
+  },
+  {
+    "id": 8,
+    "name": "Basic Copper Chlorides",
+    "formula": "Cu\u2082(OH)\u2083Cl",
+    "description": "Atacamite / paratacamite / clinoatacamite group (associated with bronze disease)",
+    "color": "#80E040",
+    "parent": "Copper Surface/Corroded/Chlorides",
+    "enabled": true,
+    "reserved": false,
+    "requiredVerification": "InstrumentallyVerified",
+    "yoloIndex": 7
+  },
+  {
+    "id": 255,
+    "name": "Ignore",
+    "formula": null,
+    "description": "Explicitly excluded from annotation or evaluation",
+    "color": "#FF00FF",
+    "parent": null,
+    "enabled": true,
+    "reserved": true,
+    "requiredVerification": "Unverified",
+    "yoloIndex": null
+  }
+]
