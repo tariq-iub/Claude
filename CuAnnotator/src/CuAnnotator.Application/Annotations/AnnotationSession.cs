@@ -53,7 +53,7 @@ public sealed class AnnotationSession
     /// <summary>Full-resolution BGR source (owned by the caller).</summary>
     public Mat Source { get; }
     public string User { get; set; }
-    public UndoRedoStack History { get; } = new();
+    public UndoRedoStack History { get; }
     public CandidateState? Candidate { get; private set; }
     public bool IsSegmenting { get; private set; }
 
@@ -64,8 +64,9 @@ public sealed class AnnotationSession
     public int Height => Source.Height;
 
     public AnnotationSession(AnnotationProject project, ImageItem image, Mat source, SegmentationEngine engine,
-        IAuditLog audit, string user, TimeProvider? clock = null)
+        IAuditLog audit, string user, TimeProvider? clock = null, UndoRedoStack? history = null)
     {
+        History = history ?? new UndoRedoStack();
         if (source.Width != image.Width || source.Height != image.Height)
             throw new InvalidOperationException($"Decoded image is {source.Width}×{source.Height} but the project records {image.Width}×{image.Height}.");
         Project = project; Image = image; Source = source; _engine = engine; _audit = audit; User = user;
@@ -94,6 +95,34 @@ public sealed class AnnotationSession
         if (clipped.Width < 3 || clipped.Height < 3) throw new ArgumentException("ROI must cover at least 3×3 image pixels.");
         SetCandidate(new CandidateState { Roi = clipped, Parameters = parameters.Clone(), StartedAt = Now, Interactions = 1 }, "Create ROI");
         Log(UserActor, "ROI Created", null, $"Coordinates: ({clipped.X}, {clipped.Y}, {clipped.Right}, {clipped.Bottom})");
+    }
+
+    /// <summary>
+    /// Starts from a freehand lasso or polygon ROI: the ROI is its bounding box and the drawn region becomes the
+    /// initial mask (GrabCut: inside = probable foreground, outside = probable background).
+    /// </summary>
+    public void BeginRegion(RasterMask region, SegmentationParameters parameters, string kind)
+    {
+        var r = region.ClipToImage(Width, Height);
+        if (r.IsEmpty) throw new ArgumentException("The drawn region does not cover any image pixels.");
+        var roi = r.Bounds;
+        if (roi.Width < 3 || roi.Height < 3) throw new ArgumentException("The drawn region is too small (minimum 3×3 pixels).");
+        SetCandidate(new CandidateState { Roi = roi, Parameters = parameters.Clone(), InitialMask = r, StartedAt = Now, Interactions = 1 }, $"Create {kind} ROI");
+        Log(UserActor, $"{kind} ROI Created", null, $"Bounds: ({roi.X}, {roi.Y}, {roi.Right}, {roi.Bottom}); {r.PixelCount} px");
+    }
+
+    /// <summary>Shows an externally computed result (magic wand, colour selection, region suggestion) as the candidate.</summary>
+    public void ProposeCandidate(SegmentationResult result, string description)
+    {
+        if (result.Mask.IsEmpty) throw new InvalidOperationException("The proposal is empty.");
+        var roi = result.Mask.Bounds.Inflate(2).ClampTo(Width, Height);
+        SetCandidate(new CandidateState
+        {
+            Roi = roi, Parameters = SegmentationParameters.FromDictionary(result.ParametersUsed), StartedAt = Now, Interactions = 1,
+            Result = result, FirstProposal = result.Mask, Runs = 1,
+        }, description);
+        Log($"algorithm:{result.AlgorithmName}@{result.AlgorithmVersion}", description, null,
+            $"Candidate boundary: {result.Mask.PixelCount} px, {result.Components.Count} component(s)");
     }
 
     /// <summary>Starts re-segmentation of an accepted annotation; its mask becomes the initial mask.</summary>
@@ -152,7 +181,9 @@ public sealed class AnnotationSession
         var request = new SegmentationRequest
         {
             Image = Source, Roi = c.Roi, Parameters = c.Parameters,
-            InitialMask = c.Result is null ? c.InitialMask : null,
+            // Re-runs continue from the previous result; GrabCut instead reuses its own 4-state mask and GMMs.
+            InitialMask = c.Result is null ? c.InitialMask
+                : c.Parameters.Algorithm is SegmentationAlgorithmKind.GrabCut or SegmentationAlgorithmKind.Hybrid ? null : c.Result.Mask,
             PositiveStrokes = c.Positive, NegativeStrokes = c.Negative, BarrierStrokes = c.Barrier,
             PreviousGrabCutState = c.Result?.GrabCutState,
         };
