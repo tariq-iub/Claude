@@ -16,7 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 deep = ["torch>=2.2", "segmentation-models-pytorch>=0.3"]
 sam = ["torch>=2.2", "sam2"]
-app = ["streamlit>=1.30", "streamlit-drawable-canvas>=0.9"]
+app = ["streamlit>=1.40", "plotly>=5.20", "streamlit-drawable-canvas>=0.9"]
 xai = ["shap>=0.44"]
 dev = ["pytest>=7"]
 
