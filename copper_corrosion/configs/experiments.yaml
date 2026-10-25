@@ -1,0 +1,16 @@
+# Experiment grid. Each entry overrides keys from default.yaml.
+experiments:
+  A_rgb_euclid:   {approach: approach_a, approach_a: {color_space: rgb, distance: euclidean}}
+  A_lab_cie76:    {approach: approach_a, approach_a: {color_space: lab, distance: cie76}}
+  A_lab_de2000:   {approach: approach_a, approach_a: {color_space: lab, distance: ciede2000}}
+  A_lab_settings_only: {approach: approach_a, approach_a: {use_manifest_prototypes: false}}
+  A_lab_grayworld: {approach: approach_a, color: {normalization: gray_world}}
+  B_rf:           {approach: approach_b, approach_b: {model: random_forest}}
+  B_svm:          {approach: approach_b, approach_b: {model: svm}}
+  B_hgb:          {approach: approach_b, approach_b: {model: hist_gb}}
+  B_rf_color_only: {approach: approach_b, approach_b: {features: [rgb, lab, hsv, chroma, intensity]}}
+  B_rf_rgb_only:  {approach: approach_b, approach_b: {features: [rgb]}}
+  C_slic_400:     {approach: approach_c}
+  C_slic_100:     {approach: approach_c, approach_c: {n_segments: 100}}
+  C_slic_nosmooth: {approach: approach_c, approach_c: {smoothing: 0.0}}
+  F_hybrid:       {approach: approach_f}

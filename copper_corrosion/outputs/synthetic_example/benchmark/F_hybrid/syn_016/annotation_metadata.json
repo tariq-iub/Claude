@@ -1,0 +1,189 @@
+{
+  "image_id": "syn_016",
+  "input_sha256": "dc3d08d299a8dbe18fd24d233aa99b587eb0b1b82e7ed684bf16810b31ea12f1",
+  "created_utc": "2026-10-25T10:38:23.421110+00:00",
+  "framework_version": "0.1.0",
+  "approach": {
+    "name": "approach_f_hybrid",
+    "version": "0.1.0",
+    "class": "HybridSegmenter",
+    "components": [
+      {
+        "name": "approach_a_color_match",
+        "version": "0.1.0",
+        "class": "ColorMatchSegmenter"
+      },
+      {
+        "name": "approach_b_random_forest",
+        "version": "0.1.0",
+        "class": "PixelClassifierSegmenter"
+      },
+      {
+        "name": "approach_c_superpixel",
+        "version": "0.1.0",
+        "class": "SuperpixelSegmenter"
+      }
+    ]
+  },
+  "config_hash": "50cf3be72527f6ed",
+  "config": {
+    "paths": {
+      "settings_xlsx": "data/raw/settings.xlsx",
+      "labels_xlsx": "data/raw/labels.xlsx",
+      "images_dir": "data/images",
+      "reference_masks_dir": "data/annotations/adjudicated",
+      "splits_csv": "data/annotations/splits.csv",
+      "outputs_dir": "outputs"
+    },
+    "seed": 42,
+    "classes": {
+      "settings_id_offset": 1,
+      "uncertain_value": 255,
+      "binary_uncertain_value": 255
+    },
+    "color": {
+      "illuminant": "D65",
+      "observer": "2",
+      "normalization": "none",
+      "illumination_correction": false,
+      "illumination_sigma": 50
+    },
+    "approach_a": {
+      "color_space": "lab",
+      "distance": "ciede2000",
+      "use_manifest_prototypes": true,
+      "aggregation": "nearest",
+      "abstain_margin": 2.0,
+      "max_distance": 30.0,
+      "softmax_temperature": 5.0,
+      "lut_bits": 7
+    },
+    "approach_b": {
+      "model": "random_forest",
+      "features": [
+        "rgb",
+        "lab",
+        "hsv",
+        "chroma",
+        "intensity",
+        "texture"
+      ],
+      "pixels_per_image": 4000,
+      "class_weight": "balanced",
+      "n_estimators": 200,
+      "abstain_confidence": 0.4
+    },
+    "approach_c": {
+      "n_segments": 400,
+      "compactness": 10.0,
+      "smoothing": 0.5,
+      "smoothing_iterations": 2,
+      "abstain_confidence": 0.4
+    },
+    "approach_d": {
+      "architecture": "unet",
+      "encoder": "resnet34",
+      "pretrained": true,
+      "epochs": 100,
+      "batch_size": 4,
+      "lr": 0.0003,
+      "patience": 15,
+      "tile_size": 512,
+      "dice_weight": 0.5,
+      "mixed_precision": true,
+      "mc_dropout_samples": 10,
+      "supervision": "reference"
+    },
+    "approach_e": {
+      "checkpoint": "checkpoints/sam2.1_hiera_small.pt",
+      "model_cfg": "configs/sam2.1/sam2.1_hiera_s.yaml",
+      "points_per_side": 32,
+      "label_assigner": "approach_a"
+    },
+    "approach_f": {
+      "components": [
+        "approach_a",
+        "approach_b",
+        "approach_c"
+      ],
+      "init": "approach_a",
+      "review_strategy": "uncertainty",
+      "budget_per_round": 10,
+      "max_rounds": 10,
+      "min_improvement": 0.005,
+      "patience": 2
+    },
+    "outputs": {
+      "overlay_alpha": 0.45,
+      "save_probabilities": true,
+      "boundary_overlay": true
+    },
+    "evaluation": {
+      "primary_metric": "macro_miou",
+      "secondary_metrics": [
+        "binary_dice",
+        "boundary_f1",
+        "rare_class_iou",
+        "ece"
+      ],
+      "boundary_tolerance_px": 2,
+      "small_region_max_px": 200,
+      "bootstrap_iterations": 2000,
+      "alpha": 0.05
+    }
+  },
+  "classes": {
+    "0": "Healthy",
+    "1": "Cu2O",
+    "2": "CuO",
+    "3": "CuCl",
+    "4": "CuCl2",
+    "5": "Patina"
+  },
+  "uncertain_value": 255,
+  "palette": {
+    "0": [
+      200,
+      200,
+      200
+    ],
+    "1": [
+      230,
+      159,
+      0
+    ],
+    "2": [
+      0,
+      0,
+      0
+    ],
+    "3": [
+      86,
+      180,
+      233
+    ],
+    "4": [
+      0,
+      114,
+      178
+    ],
+    "5": [
+      0,
+      158,
+      115
+    ],
+    "255": [
+      204,
+      121,
+      167
+    ]
+  },
+  "mask_conventions": {
+    "multiclass_mask.png": "uint8 class id 0..5; 255 = Unknown/Uncertain (ignored)",
+    "binary_mask.png": "uint8 0 = Healthy, 1 = any corrosion class, 255 = Unknown/Uncertain (ignored)",
+    "uncertainty_map.png": "uint8 normalised predictive entropy x 255 (0 certain, 255 max)",
+    "probabilities.npy": "float16 (H, W, 6) class probabilities/scores, channel = class id"
+  },
+  "review_status": "proposed",
+  "provenance": "automatic prediction; not human-approved"
+}

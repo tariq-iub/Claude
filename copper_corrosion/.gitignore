@@ -1,0 +1,14 @@
+# Private research data: never commit images or expert annotations.
+data/images/
+data/annotations/
+data/private/
+outputs/*
+!outputs/.gitkeep
+!outputs/synthetic_example/
+*.pt
+*.pth
+checkpoints/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+outputs/synthetic_example/**/probabilities.npy

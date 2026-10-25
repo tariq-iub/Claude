@@ -1,0 +1,10 @@
+# Versions verified in the CPU-only development environment (2026-10-25).
+numpy==2.5.3
+pandas==3.0.5
+openpyxl==3.1.5
+pillow==12.3.0
+PyYAML==6.0.3
+scikit-learn==1.9.1
+scikit-image==0.26.0
+scipy==1.18.1
+pytest==9.1.1

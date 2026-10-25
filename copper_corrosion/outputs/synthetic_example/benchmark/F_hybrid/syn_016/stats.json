@@ -1,0 +1,95 @@
+{
+  "image_id": "syn_016",
+  "height": 96,
+  "width": 128,
+  "total_pixels": 12288,
+  "valid_pixels": 12284,
+  "classes": {
+    "Healthy": {
+      "pixels": 8268,
+      "fraction_of_total": 0.6728515625,
+      "fraction_of_valid": 0.6730706610224683,
+      "mean_confidence": 0.9282039999961853
+    },
+    "Cu2O": {
+      "pixels": 874,
+      "fraction_of_total": 0.07112630208333333,
+      "fraction_of_valid": 0.07114946271572778,
+      "mean_confidence": 0.7320080995559692
+    },
+    "CuO": {
+      "pixels": 0,
+      "fraction_of_total": 0.0,
+      "fraction_of_valid": 0.0
+    },
+    "CuCl": {
+      "pixels": 1419,
+      "fraction_of_total": 0.115478515625,
+      "fraction_of_valid": 0.11551611852816672,
+      "mean_confidence": 0.7329320907592773
+    },
+    "CuCl2": {
+      "pixels": 607,
+      "fraction_of_total": 0.049397786458333336,
+      "fraction_of_valid": 0.04941387170302833,
+      "mean_confidence": 0.7715141177177429
+    },
+    "Patina": {
+      "pixels": 1116,
+      "fraction_of_total": 0.0908203125,
+      "fraction_of_valid": 0.09084988603060892,
+      "mean_confidence": 0.7514939308166504
+    }
+  },
+  "corroded_pixels": 4016,
+  "corrosion_fraction_of_total": 0.3268229166666667,
+  "corrosion_fraction_of_valid": 0.32692933897753174,
+  "uncertain_pixels": 4,
+  "uncertain_fraction": 0.0003255208333333333,
+  "corrosion_components": 29,
+  "component_size_px": {
+    "min": 1,
+    "median": 49.0,
+    "max": 756,
+    "mean": 138.48275862068965
+  },
+  "components_per_class": {
+    "Cu2O": 19,
+    "CuO": 0,
+    "CuCl": 26,
+    "CuCl2": 7,
+    "Patina": 16
+  },
+  "area_units": "pixels (no physical calibration supplied; do not interpret as mm^2)",
+  "uncertainty": {
+    "mean": 0.2520867586135864,
+    "p95": 0.5832186937332153
+  },
+  "confidence": {
+    "mean_max_prob": 0.8677215576171875
+  },
+  "approach": "approach_f_hybrid",
+  "model_version": "0.1.0",
+  "config_hash": "50cf3be72527f6ed",
+  "review_status": "proposed",
+  "evaluation_vs_reference": {
+    "reference_type": "synthetic",
+    "macro_miou": 0.9858266544153274,
+    "corrosion_miou": 0.9833414870843425,
+    "healthy_iou": 0.9957673237392671,
+    "macro_dice": 0.992819323508721,
+    "fw_dice": 0.9957491320319793,
+    "binary_dice": 0.9951666873218491,
+    "binary_iou": 0.9903798717316231,
+    "sensitivity": 0.9906242289661978,
+    "specificity": 0.9998785670916819,
+    "boundary_f1": 0.9833799594331876,
+    "hd95": 0.0,
+    "rare_class_iou": NaN,
+    "small_region_recall": 0.9622641509433962,
+    "balanced_accuracy": 0.990157092395307,
+    "abstention_rate": 0.0003255208333333333,
+    "ece": 0.12812800735506852,
+    "brier": 0.05213060321878319
+  }
+}

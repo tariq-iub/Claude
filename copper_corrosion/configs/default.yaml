@@ -1,0 +1,91 @@
+# Central configuration. All paths are relative to the project root unless absolute.
+paths:
+  settings_xlsx: data/raw/settings.xlsx
+  labels_xlsx: data/raw/labels.xlsx
+  images_dir: data/images          # private, git-ignored
+  reference_masks_dir: data/annotations/adjudicated   # private, git-ignored
+  splits_csv: data/annotations/splits.csv             # image_id,group_id,split
+  outputs_dir: outputs
+
+seed: 42
+
+classes:
+  # settings.xlsx id (1..6) -> project class id (id - 1). Verified by audit.
+  settings_id_offset: 1
+  uncertain_value: 255     # value written to multiclass_mask.png for Unknown/Uncertain
+  binary_uncertain_value: 255
+
+color:
+  # ASSUMPTION A1: images and workbook colours are sRGB, D65 illuminant, 2-degree observer.
+  illuminant: D65
+  observer: "2"
+  normalization: none      # none | gray_world | max_rgb
+  illumination_correction: false
+  illumination_sigma: 50
+
+approach_a:
+  color_space: lab         # rgb | lab
+  distance: ciede2000      # euclidean | cie76 | ciede2000
+  use_manifest_prototypes: true
+  aggregation: nearest     # nearest | mean
+  abstain_margin: 2.0      # min (second-best - best) distance; below -> uncertain
+  max_distance: 30.0       # best distance above this -> uncertain
+  softmax_temperature: 5.0
+  lut_bits: 7               # RGB quantisation for the distance cache (8 = exact)
+
+approach_b:
+  model: random_forest     # random_forest | svm | hist_gb
+  features: [rgb, lab, hsv, chroma, intensity, texture]
+  pixels_per_image: 4000
+  class_weight: balanced
+  n_estimators: 200
+  abstain_confidence: 0.4
+
+approach_c:
+  n_segments: 400
+  compactness: 10.0
+  smoothing: 0.5           # 0 = no graph smoothing; 1 = full neighbour averaging
+  smoothing_iterations: 2
+  abstain_confidence: 0.4
+
+approach_d:
+  architecture: unet       # unet | deeplabv3plus
+  encoder: resnet34
+  pretrained: true
+  epochs: 100
+  batch_size: 4
+  lr: 0.0003
+  patience: 15
+  tile_size: 512
+  dice_weight: 0.5
+  mixed_precision: true
+  mc_dropout_samples: 10
+  supervision: reference   # reference | pseudo  (pseudo results must be labelled provisional)
+
+approach_e:
+  checkpoint: checkpoints/sam2.1_hiera_small.pt
+  model_cfg: configs/sam2.1/sam2.1_hiera_s.yaml
+  points_per_side: 32
+  label_assigner: approach_a   # class assignment inside each proposed region
+
+approach_f:
+  components: [approach_a, approach_b, approach_c]
+  init: approach_a
+  review_strategy: uncertainty  # random | uncertainty | disagreement
+  budget_per_round: 10          # images per review round
+  max_rounds: 10
+  min_improvement: 0.005        # stop if val mIoU gain below this for `patience` rounds
+  patience: 2
+
+outputs:
+  overlay_alpha: 0.45
+  save_probabilities: true
+  boundary_overlay: true
+
+evaluation:
+  primary_metric: macro_miou
+  secondary_metrics: [binary_dice, boundary_f1, rare_class_iou, ece]
+  boundary_tolerance_px: 2
+  small_region_max_px: 200
+  bootstrap_iterations: 2000
+  alpha: 0.05
