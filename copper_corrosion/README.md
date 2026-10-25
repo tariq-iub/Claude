@@ -31,6 +31,23 @@ python scripts/make_synthetic_example.py         # end-to-end demo on synthetic 
 To smoke-test on real photographs, put them in `data/test_images/`. `tests/test_real_images.py` runs Approach A on them and checks the
 output contract (it does not measure accuracy).
 
+## Workbench UI (run, inspect and compare all approaches)
+```bash
+pip install -e ".[app]"          # streamlit + plotly
+streamlit run app/workbench.py
+```
+The workbench has seven guided steps:
+1. **Inputs:** workbook audit with colour swatches and a CIELAB scatter.
+2. **Images:** upload images (masks optional), generate a synthetic set, or load a folder.
+3. **Approaches:** choose cards. Unavailable ones say what they need.
+4. **Run:** run the next approach or all of them. Each one goes through fit, predict, evaluate and robustness with live progress.
+5. **Results:** side-by-side overlays, class masks, boundaries and uncertainty, plus per-image statistics.
+6. **Compare:** KPI tiles, mIoU bars with CIs, accuracy against cost, a metric-profile heatmap, per-class IoU, confusion matrices,
+   robustness, coverage–risk curves, paired statistics, the predeclared ranking, class composition, and agreement between methods.
+7. **Export:** a ZIP of every artefact.
+
+Images without reference masks still get compared, but only by class composition and agreement between methods, never by accuracy.
+
 ## Layout
 `src/cucorr/`: `data/` (workbooks, splits, synthetic), `color_science/`, `segmentation/` (A–F behind one interface),
 `active_learning/`, `annotation/` (append-only store, edit ops), `evaluation/` (metrics, agreement, statistics, benchmark),
