@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CuAnnotator.Domain\CuAnnotator.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CuAnnotator.Vision\CuAnnotator.Vision.csproj" />
+    <ProjectReference Include="..\..\src\CuAnnotator.Contracts\CuAnnotator.Contracts.csproj" />
+  </ItemGroup>
+</Project>
