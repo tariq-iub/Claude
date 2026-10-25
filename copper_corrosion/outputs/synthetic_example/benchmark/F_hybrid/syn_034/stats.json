@@ -1,0 +1,96 @@
+{
+  "image_id": "syn_034",
+  "height": 96,
+  "width": 128,
+  "total_pixels": 12288,
+  "valid_pixels": 12283,
+  "classes": {
+    "Healthy": {
+      "pixels": 8481,
+      "fraction_of_total": 0.690185546875,
+      "fraction_of_valid": 0.69046649841244,
+      "mean_confidence": 0.9298713803291321
+    },
+    "Cu2O": {
+      "pixels": 546,
+      "fraction_of_total": 0.04443359375,
+      "fraction_of_valid": 0.044451681185378164,
+      "mean_confidence": 0.7429067492485046
+    },
+    "CuO": {
+      "pixels": 1,
+      "fraction_of_total": 8.138020833333333e-05,
+      "fraction_of_valid": 8.141333550435561e-05,
+      "mean_confidence": 0.4593946933746338
+    },
+    "CuCl": {
+      "pixels": 1313,
+      "fraction_of_total": 0.10685221354166667,
+      "fraction_of_valid": 0.10689570951721893,
+      "mean_confidence": 0.7337689399719238
+    },
+    "CuCl2": {
+      "pixels": 1167,
+      "fraction_of_total": 0.094970703125,
+      "fraction_of_valid": 0.095009362533583,
+      "mean_confidence": 0.8168333172798157
+    },
+    "Patina": {
+      "pixels": 775,
+      "fraction_of_total": 0.06306966145833333,
+      "fraction_of_valid": 0.0630953350158756,
+      "mean_confidence": 0.7790965437889099
+    }
+  },
+  "corroded_pixels": 3802,
+  "corrosion_fraction_of_total": 0.3094075520833333,
+  "corrosion_fraction_of_valid": 0.30953350158756004,
+  "uncertain_pixels": 5,
+  "uncertain_fraction": 0.0004069010416666667,
+  "corrosion_components": 19,
+  "component_size_px": {
+    "min": 1,
+    "median": 64.0,
+    "max": 1239,
+    "mean": 200.10526315789474
+  },
+  "components_per_class": {
+    "Cu2O": 7,
+    "CuO": 1,
+    "CuCl": 13,
+    "CuCl2": 7,
+    "Patina": 11
+  },
+  "area_units": "pixels (no physical calibration supplied; do not interpret as mm^2)",
+  "uncertainty": {
+    "mean": 0.23700971901416779,
+    "p95": 0.539668083190918
+  },
+  "confidence": {
+    "mean_max_prob": 0.8800933957099915
+  },
+  "approach": "approach_f_hybrid",
+  "model_version": "0.1.0",
+  "config_hash": "50cf3be72527f6ed",
+  "review_status": "proposed",
+  "evaluation_vs_reference": {
+    "reference_type": "synthetic",
+    "macro_miou": 0.8252022590162579,
+    "corrosion_miou": 0.988422200405575,
+    "healthy_iou": 0.9975247524752475,
+    "macro_dice": 0.8292052304013998,
+    "fw_dice": 0.9977907991085598,
+    "binary_dice": 0.9971143756558237,
+    "binary_iou": 0.9942453570494376,
+    "sensitivity": 0.9945054945054945,
+    "specificity": 0.9996456413890857,
+    "boundary_f1": 0.9829242262540022,
+    "hd95": 0.0,
+    "rare_class_iou": NaN,
+    "small_region_recall": 1.0,
+    "balanced_accuracy": 0.9921473457736514,
+    "abstention_rate": 0.0004069010416666667,
+    "ece": 0.11779070355260046,
+    "brier": 0.04167731061233895
+  }
+}
