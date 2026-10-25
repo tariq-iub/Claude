@@ -179,6 +179,21 @@ public class RasterMaskTests
         Assert.True(mask.Equals(CocoRle.DecodeLocal(CocoRle.FromCompressedString(s), mask.Bounds)));
     }
 
+    [Theory]
+    [InlineData(0, 0, 10, 8)]   // touches top-left
+    [InlineData(5, 3, 10, 8)]   // interior
+    [InlineData(30, 22, 10, 8)] // touches bottom-right
+    [InlineData(0, 0, 40, 30)]  // full frame
+    [InlineData(-4, 25, 12, 9)] // partly outside (clipped)
+    public void CocoRle_BoundedEncoder_MatchesGenericEncoder(int x, int y, int w, int h)
+    {
+        var rnd = new Random(x * 31 + y);
+        var data = new byte[w * h];
+        for (int i = 0; i < data.Length; i++) data[i] = rnd.NextDouble() < 0.5 ? (byte)1 : (byte)0;
+        var mask = new RasterMask(new PixelRect(x, y, w, h), data);
+        Assert.Equal(CocoRle.Encode(mask.Get, 40, 30), CocoRle.Encode(mask, 40, 30));
+    }
+
     [Fact]
     public void CocoRle_UsesColumnMajorOrderStartingWithZeros()
     {

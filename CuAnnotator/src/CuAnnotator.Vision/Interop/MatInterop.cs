@@ -15,20 +15,21 @@ public static class MatInterop
     public static byte[] ToBytes(Mat m)
     {
         if (m.Type() != MatType.CV_8UC1) throw new ArgumentException($"Expected CV_8UC1, got {m.Type()}.");
-        var data = new byte[m.Rows * m.Cols];
+        int rows = m.Rows, cols = m.Cols;
+        var data = new byte[rows * cols];
         if (m.IsContinuous()) Marshal.Copy(m.Data, data, 0, data.Length);
         else
-            for (int y = 0; y < m.Rows; y++)
-                Marshal.Copy(m.Ptr(y), data, y * m.Cols, m.Cols);
+            for (int y = 0; y < rows; y++)
+                Marshal.Copy(m.Ptr(y), data, y * cols, cols);
         return data;
     }
 
     public static float[] ToFloats(Mat m)
     {
         if (m.Depth() != MatType.CV_32F) throw new ArgumentException("Expected 32F Mat.");
-        int rowLen = m.Cols * m.Channels();
-        var data = new float[m.Rows * rowLen];
-        for (int y = 0; y < m.Rows; y++) Marshal.Copy(m.Ptr(y), data, y * rowLen, rowLen);
+        int rows = m.Rows, rowLen = m.Cols * m.Channels();
+        var data = new float[rows * rowLen];
+        for (int y = 0; y < rows; y++) Marshal.Copy(m.Ptr(y), data, y * rowLen, rowLen);
         return data;
     }
 

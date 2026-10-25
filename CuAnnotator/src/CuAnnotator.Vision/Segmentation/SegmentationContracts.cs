@@ -106,11 +106,15 @@ public sealed class SegmentationParameters
         return result;
     }
 
-    /// <summary>Maximum ROI pixel count processed at full resolution for the chosen quality preset.</summary>
+    /// <summary>
+    /// Maximum context-frame pixel count GrabCut processes at full resolution for the quality preset. Larger
+    /// frames are downscaled. Budgets were chosen from measured GrabCut cost, which grows faster than linearly
+    /// with frame size (see benchmarks/results and 11_Performance_Optimization.md).
+    /// </summary>
     public long MaxProcessingPixels => Quality switch
     {
         ProcessingQuality.Fast => 512 * 512,
-        ProcessingQuality.Balanced => 2048 * 2048,
+        ProcessingQuality.Balanced => 768 * 768,
         _ => long.MaxValue,
     };
 }

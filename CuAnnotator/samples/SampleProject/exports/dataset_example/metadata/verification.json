@@ -1,0 +1,140 @@
+[
+  {
+    "image": "specimen_A_01.png",
+    "annotationId": "8ff541bc-72fe-46fd-b38f-b7e87e7ceb61",
+    "classId": 2,
+    "verification": "VisuallyEstimated",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_A_01.png",
+    "annotationId": "f5b7549d-76fd-46b1-9248-0ed0fab3c04e",
+    "classId": 3,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_A_01.png",
+    "annotationId": "05492659-f7c8-4587-8760-3e9889d1fe84",
+    "classId": 6,
+    "verification": "ExpertReviewed",
+    "classAssignment": "Manual",
+    "reviewedBy": "example reviewer",
+    "evidence": [
+      {
+        "type": "ExpertObservation",
+        "Source": "FICTITIOUS EXAMPLE \u2014 not a real measurement",
+        "Notes": "Demonstrates evidence recording."
+      }
+    ]
+  },
+  {
+    "image": "specimen_A_01.png",
+    "annotationId": "3e4a4b54-16dc-4419-868b-8dfc86edab04",
+    "classId": 8,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_A_01.png",
+    "annotationId": "855cc9e6-b841-4ee2-aee3-f9edc9d6e758",
+    "classId": 8,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_A_01.png",
+    "annotationId": "0eb3fe07-8e99-491a-b8fa-e0ad0dc62a08",
+    "classId": 8,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_A_01.png",
+    "annotationId": "441d19b3-a9bd-43b0-b9ef-1d44e3783f4f",
+    "classId": 1,
+    "verification": "VisuallyEstimated",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_B_01.png",
+    "annotationId": "70fd1181-ac09-48b8-8758-29a10c769426",
+    "classId": 2,
+    "verification": "VisuallyEstimated",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_B_01.png",
+    "annotationId": "734901df-1f71-4d99-9d4c-0055b503d32b",
+    "classId": 3,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_B_01.png",
+    "annotationId": "3318ac8b-35ce-4548-83fd-65e025b4964c",
+    "classId": 6,
+    "verification": "ExpertReviewed",
+    "classAssignment": "Manual",
+    "reviewedBy": "example reviewer",
+    "evidence": [
+      {
+        "type": "ExpertObservation",
+        "Source": "FICTITIOUS EXAMPLE \u2014 not a real measurement",
+        "Notes": "Demonstrates evidence recording."
+      }
+    ]
+  },
+  {
+    "image": "specimen_B_01.png",
+    "annotationId": "cfa90962-603b-4de9-b5dd-1169c4cf55cc",
+    "classId": 8,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_B_01.png",
+    "annotationId": "56215ee8-5641-4789-8c77-57b0ac791d29",
+    "classId": 8,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_B_01.png",
+    "annotationId": "3481f664-ed4b-407b-8805-02b7e569db86",
+    "classId": 8,
+    "verification": "Unverified",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  },
+  {
+    "image": "specimen_B_01.png",
+    "annotationId": "aa0e8555-a463-458d-aa5f-aae82c0af992",
+    "classId": 1,
+    "verification": "VisuallyEstimated",
+    "classAssignment": "Manual",
+    "reviewedBy": null,
+    "evidence": []
+  }
+]

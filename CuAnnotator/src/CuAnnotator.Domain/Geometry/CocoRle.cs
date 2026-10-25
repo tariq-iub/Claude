@@ -24,8 +24,44 @@ public static class CocoRle
         return counts;
     }
 
-    public static List<long> Encode(RasterMask mask, int imageWidth, int imageHeight) =>
-        Encode(mask.Get, imageWidth, imageHeight);
+    /// <summary>
+    /// Full-frame encoding of a bounded mask. Pixels outside <see cref="RasterMask.Bounds"/> are zero, so whole
+    /// columns (and the rows above/below the bounds) are added to the current zero run arithmetically; only the
+    /// pixels inside the bounds are visited. Output is identical to the generic per-pixel encoder.
+    /// </summary>
+    public static List<long> Encode(RasterMask mask, int imageWidth, int imageHeight)
+    {
+        var b = mask.Bounds.ClampTo(imageWidth, imageHeight);
+        if (b.IsEmpty) return new List<long> { (long)imageWidth * imageHeight };
+        var counts = new List<long>();
+        bool current = false;
+        long run = (long)b.X * imageHeight + b.Y;           // columns left of the bounds + rows above in first column
+        for (int x = b.X; x < b.Right; x++)
+        {
+            int mx = x - mask.Bounds.X;
+            for (int y = b.Y; y < b.Bottom; y++)
+            {
+                bool v = mask.Data[(y - mask.Bounds.Y) * mask.Width + mx] != 0;
+                if (v != current) { counts.Add(run); run = 0; current = v; }
+                run++;
+            }
+            // Rows below the bounds in this column and above the bounds in the next column are zeros.
+            long gap = (imageHeight - b.Bottom) + (x + 1 < b.Right ? b.Y : 0);
+            if (gap > 0)
+            {
+                if (current) { counts.Add(run); run = 0; current = false; }
+                run += gap;
+            }
+        }
+        long tail = (long)(imageWidth - b.Right) * imageHeight;
+        if (tail > 0)
+        {
+            if (current) { counts.Add(run); run = 0; current = false; }
+            run += tail;
+        }
+        counts.Add(run);
+        return counts;
+    }
 
     /// <summary>Encode a mask relative to its own bounds (used for native storage).</summary>
     public static List<long> EncodeLocal(RasterMask mask) =>

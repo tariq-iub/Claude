@@ -1,0 +1,47 @@
+{
+  "format": "CuAnnotator dataset",
+  "project": "Synthetic copper corrosion example",
+  "projectId": "80bacfba-2438-4d86-a3fa-8473b9cfe8a6",
+  "exportedAt": "2026-10-25T16:44:41.8267493\u002B00:00",
+  "appVersion": "1.0.0",
+  "taxonomyVersion": 1,
+  "coordinateConvention": "Origin top-left; X right; Y down; zero-based integer pixel indices. Pixel (x,y) covers [x,x\u002B1)\u00D7[y,y\u002B1). Polygon vertices are boundary-pixel indices (pixel centres). Masks are stored as COCO compressed RLE (column-major) relative to \u0027bounds\u0027 [x, y, width, height].",
+  "maskEncoding": "8-bit single-channel PNG; pixel value = class ID; 0 = unlabeled; 255 = ignore",
+  "split": {
+    "seed": 42,
+    "train": 0.5,
+    "validation": 0,
+    "groupedBySpecimen": true,
+    "enabled": true
+  },
+  "images": [
+    {
+      "file": "specimen_A_01.png",
+      "mask": "specimen_A_01.png",
+      "imageId": "8dcf8e17-58bc-46b4-9945-a64234a440e0",
+      "original": "specimen_A_01.png",
+      "sha256": "794854337d41a6260e38b75a7ade03c97c0bfd936ba76c281ad2eb3be3d40be1",
+      "width": 1024,
+      "height": 768,
+      "specimen": "A",
+      "split": "train",
+      "workflow": "Annotated",
+      "micrometersPerPixel": null,
+      "magnification": null
+    },
+    {
+      "file": "specimen_B_01.png",
+      "mask": "specimen_B_01.png",
+      "imageId": "7c87d3f7-1b30-440f-8ef5-8acdf55b0a16",
+      "original": "specimen_B_01.png",
+      "sha256": "e1d9be14f6dfdc27ff88f3e772185d7bbd475ef44c1bf352fc420844cabdd272",
+      "width": 1024,
+      "height": 768,
+      "specimen": "B",
+      "split": "test",
+      "workflow": "Annotated",
+      "micrometersPerPixel": null,
+      "magnification": null
+    }
+  ]
+}
